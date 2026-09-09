@@ -22,3 +22,4 @@ Team Nexify
 ## Project Status
 
 🚧 Under development for Smart India Hackathon 2026.
+SwasthOne SIH 2026 - Project Setup
