@@ -1,121 +1,467 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
+
+import PatientRegistration from './pages/PatientRegistration'
+import PatientProfile from './pages/PatientProfile'
+import Screening from './pages/Screening'
+import LanguageSelector from './components/LanguageSelector'
+import { t, useLanguage } from './i18n'
+import RPPGScreening from './pages/RPPGScreening'
+import TrustScore from './pages/TrustScore'
+import Triage from './pages/Triage'
+import Referral from './pages/Referral'
+import ReferralTracking from './pages/ReferralTracking'
+import PatientRecord from './pages/PatientRecord'
+import FollowUp from './pages/FollowUp'
+
+import {
+  Activity,
+  Bell,
+  ChevronRight,
+  ClipboardList,
+  HeartPulse,
+  Plus,
+  ShieldCheck,
+  Stethoscope,
+  Users,
+} from 'lucide-react'
+
+import Sidebar from './components/Sidebar'
+import BottomNav from './components/BottomNav'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+function Dashboard() {
+  useLanguage()
+  const navigate = useNavigate()
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app-shell">
+      <Sidebar />
 
-      <div className="ticks"></div>
+      <main className="main-content">
+        {/* =========================
+            TOP HEADER
+           ========================= */}
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">Thursday, 10 September 2026</p>
+            <h1>{t('dashboard', 'greeting')} 👋</h1>
+          </div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          <div className="topbar-actions">
+            <LanguageSelector />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+            <button
+              className="notification-button"
+              type="button"
+              aria-label="Notifications"
+            >
+              <Bell size={21} />
+              <span className="notification-dot" />
+            </button>
+          </div>
+        </header>
+
+        {/* =========================
+            WELCOME CARD
+           ========================= */}
+        <section className="welcome-card">
+          <div className="welcome-content">
+            <div className="welcome-icon">
+              <HeartPulse size={25} />
+            </div>
+
+            <div>
+              <p className="welcome-label">
+                {t('dashboard', 'overview')}
+              </p>
+
+              <h2>{t('dashboard', 'headline')}</h2>
+
+              <p>{t('dashboard', 'description')}</p>
+            </div>
+          </div>
+
+          <button
+            className="primary-button"
+            type="button"
+            onClick={() => navigate('/patients/register')}
+          >
+            <Plus size={18} />
+            {t('dashboard', 'startScreening')}
+          </button>
+        </section>
+
+        {/* =========================
+            STATS
+           ========================= */}
+        <section className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-icon teal">
+              <Users size={21} />
+            </div>
+
+            <div>
+              <span className="stat-label">
+                {t('dashboard', 'patientsToday')}
+              </span>
+
+              <strong>24</strong>
+
+              <small>
+                {t('dashboard', 'fromYesterday')}
+              </small>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-icon green">
+              <Activity size={21} />
+            </div>
+
+            <div>
+              <span className="stat-label">
+                {t('dashboard', 'screenings')}
+              </span>
+
+              <strong>18</strong>
+
+              <small>
+                {t('dashboard', 'completed')}
+              </small>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-icon orange">
+              <Stethoscope size={21} />
+            </div>
+
+            <div>
+              <span className="stat-label">
+                {t('dashboard', 'followUps')}
+              </span>
+
+              <strong>7</strong>
+
+              <small>
+                {t('dashboard', 'dueToday')}
+              </small>
+            </div>
+          </div>
+        </section>
+
+        {/* =========================
+            MAIN CONTENT
+           ========================= */}
+        <div className="content-grid">
+          {/* QUICK ACTIONS */}
+          <section className="panel">
+            <div className="panel-header">
+              <div>
+                <p className="section-kicker">
+                  {t('dashboard', 'patientWorkflow')}
+                </p>
+
+                <h3>
+                  {t('dashboard', 'quickActions')}
+                </h3>
+              </div>
+            </div>
+
+            <div className="quick-actions">
+              {/* Register */}
+              <button
+                className="action-card"
+                type="button"
+                onClick={() => navigate('/patients/register')}
+              >
+                <div className="action-icon">
+                  <Users size={21} />
+                </div>
+
+                <div>
+                  <strong>
+                    {t('dashboard', 'registerPatient')}
+                  </strong>
+
+                  <span>
+                    {t('dashboard', 'registerDescription')}
+                  </span>
+                </div>
+
+                <ChevronRight size={18} />
+              </button>
+
+              {/* Continue screening */}
+              <button
+                className="action-card"
+                type="button"
+                onClick={() => navigate('/patients/register')}
+              >
+                <div className="action-icon">
+                  <Activity size={21} />
+                </div>
+
+                <div>
+                  <strong>
+                    {t('dashboard', 'continueScreening')}
+                  </strong>
+
+                  <span>
+                    {t('dashboard', 'continueDescription')}
+                  </span>
+                </div>
+
+                <ChevronRight size={18} />
+              </button>
+
+              {/* Referrals */}
+              <button
+                className="action-card"
+                type="button"
+              >
+                <div className="action-icon">
+                  <ClipboardList size={21} />
+                </div>
+
+                <div>
+                  <strong>
+                    {t('dashboard', 'viewReferrals')}
+                  </strong>
+
+                  <span>
+                    {t('dashboard', 'referralDescription')}
+                  </span>
+                </div>
+
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </section>
+
+          {/* RECENT ACTIVITY */}
+          <section className="panel">
+            <div className="panel-header">
+              <div>
+                <p className="section-kicker">
+                  {t('dashboard', 'recentActivity')}
+                </p>
+
+                <h3>
+                  {t('dashboard', 'screeningStatus')}
+                </h3>
+              </div>
+
+              <button
+                className="text-button"
+                type="button"
+              >
+                {t('dashboard', 'viewAll')}
+              </button>
+            </div>
+
+            <div className="patient-list">
+              <PatientRow
+                initials="RK"
+                name="Ramesh Kumar"
+                time="10 min ago"
+                status="Routine"
+                statusClass="routine"
+              />
+
+              <PatientRow
+                initials="SP"
+                name="Sunita Patel"
+                time="32 min ago"
+                status="Consult"
+                statusClass="consult"
+              />
+
+              <PatientRow
+                initials="AM"
+                name="Anil Mehta"
+                time="1 hr ago"
+                status="Urgent"
+                statusClass="urgent"
+              />
+            </div>
+          </section>
+        </div>
+
+        {/* =========================
+            TRUST BANNER
+           ========================= */}
+        <section className="trust-banner">
+          <div className="trust-banner-icon">
+            <ShieldCheck size={22} />
+          </div>
+
+          <div>
+            <strong>
+              {t('dashboard', 'trustTitle')}
+            </strong>
+
+            <p>
+              {t('dashboard', 'trustDescription')}
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <BottomNav />
+    </div>
+  )
+}
+
+/* =========================================================
+   PATIENT ROW
+   ========================================================= */
+
+function PatientRow({
+  initials,
+  name,
+  time,
+  status,
+  statusClass,
+}: {
+  initials: string
+  name: string
+  time: string
+  status: string
+  statusClass: string
+}) {
+  return (
+    <div className="patient-row">
+      <div className="patient-avatar">
+        {initials}
+      </div>
+
+      <div className="patient-info">
+        <strong>{name}</strong>
+        <span>{time}</span>
+      </div>
+
+      <span className={`status-pill ${statusClass}`}>
+        {status === 'Routine' &&
+          t('dashboard', 'routine')}
+
+        {status === 'Consult' &&
+          t('dashboard', 'consult')}
+
+        {status === 'Urgent' &&
+          t('dashboard', 'urgent')}
+      </span>
+    </div>
+  )
+}
+
+/* =========================================================
+   PLACEHOLDER
+   ========================================================= */
+
+function Placeholder({
+  title,
+}: {
+  title: string
+}) {
+  return (
+    <div className="placeholder-page">
+      <Sidebar activeItem={title} />
+
+      <main className="main-content">
+        <h1>{title}</h1>
+        <p>This module is coming next.</p>
+      </main>
+
+      <BottomNav />
+    </div>
+  )
+}
+
+/* =========================================================
+   APP ROUTES
+   ========================================================= */
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/"
+          element={<Dashboard />}
+        />
+
+        <Route
+          path="/patients/register"
+          element={<PatientRegistration />}
+        />
+
+        <Route
+          path="/patients/profile"
+          element={<PatientProfile />}
+        />
+
+        <Route
+          path="/screening"
+          element={<Screening />}
+        />
+        <Route
+          path="/screening/rppg"
+          element={<RPPGScreening />}
+        />
+        <Route
+          path="/screening/trustscore"
+          element={<TrustScore />}
+        />
+        <Route
+          path="/screening/triage"
+          element={<Triage />}
+        />
+        <Route
+          path="/referral"
+          element={<Referral />}
+        />
+
+        <Route
+          path="/referral/tracking"
+          element={<ReferralTracking />}
+        />
+        <Route
+          path="/patient-record"
+          element={<PatientRecord />}
+        />
+
+        <Route
+          path="/follow-up"
+          element={<FollowUp />}
+        />
+
+        <Route
+          path="/patient"
+          element={
+            <Placeholder title="Patients" />
+          }
+        />
+        <Route
+          path="/asha"
+          element={<Dashboard />}
+        />
+
+        <Route
+          path="/doctor"
+          element={
+            <Placeholder title="Doctor Dashboard" />
+          }
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <Placeholder title="Admin Dashboard" />
+          }
+        />
+      </Routes>
+    </BrowserRouter>
   )
 }
 
