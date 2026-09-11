@@ -9,7 +9,6 @@ import {
   MapPin,
   Phone,
   Send,
-  Stethoscope,
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { t, useLanguage } from '../i18n'

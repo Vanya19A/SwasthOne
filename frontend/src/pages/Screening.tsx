@@ -1,6 +1,9 @@
-import { FormEvent, useState } from 'react'
+import { useState } from 'react'
+import type { SubmitEvent } from 'react'
 import { ArrowLeft, ArrowRight, Check, HeartPulse, Stethoscope } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { saveOfflineRecord } from '../utils/offlineStorage'
+import { t, useLanguage } from '../i18n'
 
 interface Patient {
   name: string
@@ -11,16 +14,6 @@ interface Patient {
   emergencyContact: string
 }
 
-interface ScreeningData {
-  symptoms: string[]
-  duration: string
-  severity: string
-  hasManualVitals: boolean
-  bloodPressure: string
-  pulse: string
-  temperature: string
-  oxygenSaturation: string
-}
 
 const symptomOptions = [
   'Fever',
@@ -34,6 +27,7 @@ const symptomOptions = [
 ]
 
 function Screening() {
+  useLanguage()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -58,24 +52,31 @@ function Screening() {
     )
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    const screening: ScreeningData = {
+    const screeningData = {
       symptoms,
       duration,
       severity,
       hasManualVitals,
-      bloodPressure: hasManualVitals ? bloodPressure : '',
-      pulse: hasManualVitals ? pulse : '',
-      temperature: hasManualVitals ? temperature : '',
-      oxygenSaturation: hasManualVitals ? oxygenSaturation : '',
+      bloodPressure,
+      pulse,
+      temperature,
+      oxygenSaturation,
+    }
+
+    if (!navigator.onLine) {
+      saveOfflineRecord('screening', {
+        patient,
+        screening: screeningData,
+      })
     }
 
     navigate('/screening/rppg', {
       state: {
         patient,
-        screening,
+        screening: screeningData,
       },
     })
   }
@@ -87,10 +88,14 @@ function Screening() {
           <button
             className="back-button"
             type="button"
-            onClick={() => navigate('/patients/profile', { state: { patient } })}
+            onClick={() =>
+              navigate('/patients/profile', {
+                state: { patient },
+              })
+            }
           >
             <ArrowLeft size={18} />
-            Back
+            {t('common', 'back')}
           </button>
 
           <div className="form-heading">
@@ -99,11 +104,16 @@ function Screening() {
             </div>
 
             <div>
-              <p className="eyebrow">Patient screening</p>
-              <h1>Let's understand how you are feeling.</h1>
+              <p className="eyebrow">
+                {t('screening', 'eyebrow')}
+              </p>
+
+              <h1>
+                {t('screening', 'title')}
+              </h1>
+
               <p>
-                Tell us about your symptoms. This information will help guide
-                the next screening step.
+                {t('screening', 'description')}
               </p>
             </div>
           </div>
@@ -111,72 +121,113 @@ function Screening() {
 
         <div className="workflow">
           <div className="workflow-step completed">
-            <span><Check size={14} /></span>
-            <label>Registration</label>
+            <span>
+              <Check size={14} />
+            </span>
+
+            <label>
+              {t('screening', 'registration')}
+            </label>
           </div>
 
           <div className="workflow-line active" />
 
           <div className="workflow-step active">
             <span>2</span>
-            <label>Symptoms</label>
+
+            <label>
+              {t('screening', 'symptomsStep')}
+            </label>
           </div>
 
           <div className="workflow-line" />
 
           <div className="workflow-step">
             <span>3</span>
-            <label>rPPG</label>
+
+            <label>
+              {t('screening', 'rppg')}
+            </label>
           </div>
 
           <div className="workflow-line" />
 
           <div className="workflow-step">
             <span>4</span>
-            <label>Triage</label>
+
+            <label>
+              {t('screening', 'triage')}
+            </label>
           </div>
         </div>
 
         {patient && (
           <div className="patient-strip">
             <div>
-              <span>Screening for</span>
+              <span>
+                {t('screening', 'screeningFor')}
+              </span>
+
               <strong>{patient.name}</strong>
             </div>
 
             <div>
-              <span>Age</span>
+              <span>
+                {t('screening', 'age')}
+              </span>
+
               <strong>{patient.age || '—'}</strong>
             </div>
 
             <div>
-              <span>Village</span>
+              <span>
+                {t('screening', 'village')}
+              </span>
+
               <strong>{patient.village || '—'}</strong>
             </div>
           </div>
         )}
 
-        <form className="screening-form" onSubmit={handleSubmit}>
+        <form
+          className="screening-form"
+          onSubmit={handleSubmit}
+        >
           <section className="form-section">
             <div className="section-heading">
               <div>
-                <span className="section-number">01</span>
-                <h2>What symptoms are you experiencing?</h2>
+                <span className="section-number">
+                  01
+                </span>
+
+                <h2>
+                  {t(
+                    'screening',
+                    'symptomsTitle',
+                  )}
+                </h2>
               </div>
 
-              <p>Select all that apply.</p>
+              <p>
+                {t('screening', 'selectAll')}
+              </p>
             </div>
 
             <div className="symptom-grid">
               {symptomOptions.map((symptom) => {
-                const selected = symptoms.includes(symptom)
+                const selected =
+                  symptoms.includes(symptom)
 
                 return (
                   <button
                     key={symptom}
                     type="button"
-                    className={`symptom-card ${selected ? 'selected' : ''}`}
-                    onClick={() => toggleSymptom(symptom)}
+                    className={`symptom-card ${
+                      selected ? 'selected' : ''
+                    }`}
+                    onClick={() =>
+                      toggleSymptom(symptom)
+                    }
                   >
                     <span>{symptom}</span>
 
@@ -194,38 +245,123 @@ function Screening() {
           <section className="form-section">
             <div className="section-heading">
               <div>
-                <span className="section-number">02</span>
-                <h2>Tell us a little more</h2>
+                <span className="section-number">
+                  02
+                </span>
+
+                <h2>
+                  {t(
+                    'screening',
+                    'moreTitle',
+                  )}
+                </h2>
               </div>
 
-              <p>These details are optional.</p>
+              <p>
+                {t(
+                  'screening',
+                  'optional',
+                )}
+              </p>
             </div>
 
             <div className="field-grid">
               <label className="field">
-                <span>How long have you had these symptoms?</span>
+                <span>
+                  {t(
+                    'screening',
+                    'duration',
+                  )}
+                </span>
+
                 <select
                   value={duration}
-                  onChange={(event) => setDuration(event.target.value)}
+                  onChange={(event) =>
+                    setDuration(
+                      event.target.value,
+                    )
+                  }
                 >
-                  <option value="">Select duration</option>
-                  <option value="Today">Today</option>
-                  <option value="2-3 days">2–3 days</option>
-                  <option value="4-7 days">4–7 days</option>
-                  <option value="More than a week">More than a week</option>
+                  <option value="">
+                    {t(
+                      'screening',
+                      'selectDuration',
+                    )}
+                  </option>
+
+                  <option value="Today">
+                    {t(
+                      'screening',
+                      'today',
+                    )}
+                  </option>
+
+                  <option value="2-3 days">
+                    {t(
+                      'screening',
+                      'days23',
+                    )}
+                  </option>
+
+                  <option value="4-7 days">
+                    {t(
+                      'screening',
+                      'days47',
+                    )}
+                  </option>
+
+                  <option value="More than a week">
+                    {t(
+                      'screening',
+                      'moreWeek',
+                    )}
+                  </option>
                 </select>
               </label>
 
               <label className="field">
-                <span>How severe do they feel?</span>
+                <span>
+                  {t(
+                    'screening',
+                    'severity',
+                  )}
+                </span>
+
                 <select
                   value={severity}
-                  onChange={(event) => setSeverity(event.target.value)}
+                  onChange={(event) =>
+                    setSeverity(
+                      event.target.value,
+                    )
+                  }
                 >
-                  <option value="">Select severity</option>
-                  <option value="Mild">Mild</option>
-                  <option value="Moderate">Moderate</option>
-                  <option value="Severe">Severe</option>
+                  <option value="">
+                    {t(
+                      'screening',
+                      'selectSeverity',
+                    )}
+                  </option>
+
+                  <option value="Mild">
+                    {t(
+                      'screening',
+                      'mild',
+                    )}
+                  </option>
+
+                  <option value="Moderate">
+                    {t(
+                      'screening',
+                      'moderate',
+                    )}
+                  </option>
+
+                  <option value="Severe">
+                    {t(
+                      'screening',
+                      'severe',
+                    )}
+                  </option>
                 </select>
               </label>
             </div>
@@ -234,41 +370,92 @@ function Screening() {
           <section className="form-section">
             <div className="section-heading">
               <div>
-                <span className="section-number">03</span>
-                <h2>Do you have measurements from a healthcare worker?</h2>
+                <span className="section-number">
+                  03
+                </span>
+
+                <h2>
+                  {t(
+                    'screening',
+                    'measurementsTitle',
+                  )}
+                </h2>
               </div>
 
-              <p>This step is optional.</p>
+              <p>
+                {t(
+                  'screening',
+                  'measurementsOptional',
+                )}
+              </p>
             </div>
 
             <div className="vitals-choice">
               <button
                 type="button"
-                className={`choice-card ${!hasManualVitals ? 'selected' : ''}`}
-                onClick={() => setHasManualVitals(false)}
+                className={`choice-card ${
+                  !hasManualVitals
+                    ? 'selected'
+                    : ''
+                }`}
+                onClick={() =>
+                  setHasManualVitals(false)
+                }
               >
                 <div className="choice-radio">
-                  {!hasManualVitals && <span />}
+                  {!hasManualVitals && (
+                    <span />
+                  )}
                 </div>
 
                 <div>
-                  <strong>No measurements available</strong>
-                  <p>Continue directly to camera-based screening.</p>
+                  <strong>
+                    {t(
+                      'screening',
+                      'noMeasurements',
+                    )}
+                  </strong>
+
+                  <p>
+                    {t(
+                      'screening',
+                      'noMeasurementsDescription',
+                    )}
+                  </p>
                 </div>
               </button>
 
               <button
                 type="button"
-                className={`choice-card ${hasManualVitals ? 'selected' : ''}`}
-                onClick={() => setHasManualVitals(true)}
+                className={`choice-card ${
+                  hasManualVitals
+                    ? 'selected'
+                    : ''
+                }`}
+                onClick={() =>
+                  setHasManualVitals(true)
+                }
               >
                 <div className="choice-radio">
-                  {hasManualVitals && <span />}
+                  {hasManualVitals && (
+                    <span />
+                  )}
                 </div>
 
                 <div>
-                  <strong>Yes, I have measurements</strong>
-                  <p>Enter readings recorded by a healthcare worker.</p>
+                  <strong>
+                    {t(
+                      'screening',
+                      'yesMeasurements',
+                    )}
+                  </strong>
+
+                  <p>
+                    {t(
+                      'screening',
+                      'yesMeasurementsDescription',
+                    )}
+                  </p>
                 </div>
               </button>
             </div>
@@ -277,64 +464,118 @@ function Screening() {
               <div className="vitals-panel">
                 <div className="vitals-heading">
                   <Stethoscope size={19} />
+
                   <div>
-                    <h3>Recorded measurements</h3>
-                    <p>Enter only measurements that are actually available.</p>
+                    <h3>
+                      {t(
+                        'screening',
+                        'recordedMeasurements',
+                      )}
+                    </h3>
+
+                    <p>
+                      {t(
+                        'screening',
+                        'recordedDescription',
+                      )}
+                    </p>
                   </div>
                 </div>
 
                 <div className="field-grid four-columns">
                   <label className="field">
-                    <span>Blood pressure</span>
+                    <span>
+                      {t(
+                        'screening',
+                        'bloodPressure',
+                      )}
+                    </span>
+
                     <div className="input-with-unit">
                       <input
                         type="text"
                         placeholder="120/80"
                         value={bloodPressure}
-                        onChange={(event) => setBloodPressure(event.target.value)}
+                        onChange={(event) =>
+                          setBloodPressure(
+                            event.target.value,
+                          )
+                        }
                       />
+
                       <span>mmHg</span>
                     </div>
                   </label>
 
                   <label className="field">
-                    <span>Pulse</span>
+                    <span>
+                      {t(
+                        'screening',
+                        'pulse',
+                      )}
+                    </span>
+
                     <div className="input-with-unit">
                       <input
                         type="number"
                         placeholder="72"
                         value={pulse}
-                        onChange={(event) => setPulse(event.target.value)}
+                        onChange={(event) =>
+                          setPulse(
+                            event.target.value,
+                          )
+                        }
                       />
+
                       <span>bpm</span>
                     </div>
                   </label>
 
                   <label className="field">
-                    <span>Temperature</span>
+                    <span>
+                      {t(
+                        'screening',
+                        'temperature',
+                      )}
+                    </span>
+
                     <div className="input-with-unit">
                       <input
                         type="number"
                         step="0.1"
                         placeholder="98.6"
                         value={temperature}
-                        onChange={(event) => setTemperature(event.target.value)}
+                        onChange={(event) =>
+                          setTemperature(
+                            event.target.value,
+                          )
+                        }
                       />
+
                       <span>°F</span>
                     </div>
                   </label>
 
                   <label className="field">
-                    <span>SpO₂</span>
+                    <span>
+                      {t(
+                        'screening',
+                        'oxygen',
+                      )}
+                    </span>
+
                     <div className="input-with-unit">
                       <input
                         type="number"
                         placeholder="98"
                         value={oxygenSaturation}
                         onChange={(event) =>
-                          setOxygenSaturation(event.target.value)
+                          setOxygenSaturation(
+                            event.target.value,
+                          )
                         }
                       />
+
                       <span>%</span>
                     </div>
                   </label>
@@ -345,11 +586,21 @@ function Screening() {
 
           <div className="form-footer">
             <p>
-              You can continue even if you do not have manual measurements.
+              {t(
+                'screening',
+                'continueNote',
+              )}
             </p>
 
-            <button className="primary-button" type="submit">
-              Continue to screening
+            <button
+              className="primary-button"
+              type="submit"
+            >
+              {t(
+                'screening',
+                'continueScreening',
+              )}
+
               <ArrowRight size={18} />
             </button>
           </div>

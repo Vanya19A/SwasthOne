@@ -13,6 +13,7 @@ import {
   Stethoscope,
   UserRound,
 } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { t, useLanguage } from '../i18n'
 
@@ -45,6 +46,7 @@ function PatientRecord() {
             onClick={() => navigate('/')}
           >
             <ArrowLeft size={18} />
+
             {t('common', 'back')}
           </button>
 
@@ -83,24 +85,32 @@ function PatientRecord() {
 
           <div className="record-profile-main">
             <div className="record-name-row">
-              <h2>{patientData.name}</h2>
+              <h2>
+                {patientData.name}
+              </h2>
 
               <span className="record-status">
                 <CheckCircle2 size={14} />
-                Active record
+
+                {t('record', 'activeRecord')}
               </span>
             </div>
 
             <div className="record-meta">
               <span>
                 <UserRound size={14} />
-                {patientData.age} years
+
+                {patientData.age}{' '}
+                {t('profile', 'years')}
               </span>
 
-              <span>{patientData.gender}</span>
+              <span>
+                {patientData.gender}
+              </span>
 
               <span>
                 <MapPin size={14} />
+
                 {patientData.village || '—'}
               </span>
             </div>
@@ -111,11 +121,13 @@ function PatientRecord() {
             type="button"
             onClick={() =>
               navigate('/patients/profile', {
-                state: { patient: patientData },
+                state: {
+                  patient: patientData,
+                },
               })
             }
           >
-            View profile
+            {t('record', 'viewProfile')}
           </button>
         </section>
 
@@ -128,8 +140,16 @@ function PatientRecord() {
             </div>
 
             <div>
-              <span>{t('record', 'latestScreening')}</span>
-              <strong>Today</strong>
+              <span>
+                {t(
+                  'record',
+                  'latestScreening',
+                )}
+              </span>
+
+              <strong>
+                {t('record', 'today')}
+              </strong>
             </div>
           </div>
 
@@ -139,8 +159,16 @@ function PatientRecord() {
             </div>
 
             <div>
-              <span>{t('record', 'trustScore')}</span>
-              <strong>86/100</strong>
+              <span>
+                {t(
+                  'record',
+                  'trustScore',
+                )}
+              </span>
+
+              <strong>
+                86/100
+              </strong>
             </div>
           </div>
 
@@ -150,8 +178,16 @@ function PatientRecord() {
             </div>
 
             <div>
-              <span>{t('record', 'careStatus')}</span>
-              <strong>Referral sent</strong>
+              <span>
+                {t(
+                  'record',
+                  'careStatus',
+                )}
+              </span>
+
+              <strong>
+                {t('record', 'referralSent')}
+              </strong>
             </div>
           </div>
         </section>
@@ -162,15 +198,24 @@ function PatientRecord() {
           <div className="record-section-header">
             <div>
               <p className="section-kicker">
-                {t('record', 'careJourney')}
+                {t(
+                  'record',
+                  'careJourney',
+                )}
               </p>
 
-              <h2>{t('record', 'journeyTitle')}</h2>
+              <h2>
+                {t(
+                  'record',
+                  'journeyTitle',
+                )}
+              </h2>
             </div>
 
             <span className="record-date">
               <CalendarDays size={14} />
-              Today
+
+              {t('record', 'today')}
             </span>
           </div>
 
@@ -178,43 +223,79 @@ function PatientRecord() {
 
             <TimelineItem
               icon={<UserRound size={17} />}
-              title={t('record', 'registered')}
-              description={t('record', 'registeredDescription')}
+              title={t(
+                'record',
+                'registered',
+              )}
+              description={t(
+                'record',
+                'registeredDescription',
+              )}
               status="completed"
             />
 
             <TimelineItem
               icon={<ClipboardCheck size={17} />}
-              title={t('record', 'screening')}
-              description={t('record', 'screeningDescription')}
+              title={t(
+                'record',
+                'screening',
+              )}
+              description={t(
+                'record',
+                'screeningDescription',
+              )}
               status="completed"
             />
 
             <TimelineItem
               icon={<ShieldCheck size={17} />}
-              title={t('record', 'trustScoreEvent')}
-              description={t('record', 'trustScoreDescription')}
+              title={t(
+                'record',
+                'trustScoreEvent',
+              )}
+              description={t(
+                'record',
+                'trustScoreDescription',
+              )}
               status="completed"
             />
 
             <TimelineItem
               icon={<Activity size={17} />}
-              title={t('record', 'triage')}
-              description={t('record', 'triageDescription')}
+              title={t(
+                'record',
+                'triage',
+              )}
+              description={t(
+                'record',
+                'triageDescription',
+              )}
               status="completed"
             />
 
             <TimelineItem
               icon={<Stethoscope size={17} />}
-              title={t('record', 'referralEvent')}
-              description={t('record', 'referralDescription')}
+              title={t(
+                'record',
+                'referralEvent',
+              )}
+              description={t(
+                'record',
+                'referralDescription',
+              )}
               status="current"
             />
 
             <TimelineItem
               icon={<HeartPulse size={17} />}
-              title={t('record', 'followUpEvent')}
-              description={t('record', 'followUpDescription')}
+              title={t(
+                'record',
+                'followUpEvent',
+              )}
+              description={t(
+                'record',
+                'followUpDescription',
+              )}
               status="upcoming"
             />
 
@@ -227,40 +308,69 @@ function PatientRecord() {
           <div className="record-section-header">
             <div>
               <p className="section-kicker">
-                {t('record', 'history')}
+                {t(
+                  'record',
+                  'history',
+                )}
               </p>
 
-              <h2>{t('record', 'historyTitle')}</h2>
+              <h2>
+                {t(
+                  'record',
+                  'historyTitle',
+                )}
+              </h2>
             </div>
 
             <button
               className="text-button"
               type="button"
             >
-              {t('record', 'viewAll')}
+              {t(
+                'record',
+                'viewAll',
+              )}
             </button>
           </div>
 
           <div className="history-table">
 
             <div className="history-row history-header">
-              <span>Date</span>
-              <span>Screening</span>
-              <span>TrustScore</span>
-              <span>Status</span>
+              <span>
+                {t('record', 'date')}
+              </span>
+
+              <span>
+                {t('record', 'screening')}
+              </span>
+
+              <span>
+                {t('record', 'trustScore')}
+              </span>
+
+              <span>
+                {t('record', 'status')}
+              </span>
             </div>
 
             <div className="history-row">
-              <span>10 Sep 2026</span>
+              <span>
+                10 Sep 2026
+              </span>
 
               <span>
                 rPPG screening
               </span>
 
-              <strong>86/100</strong>
+              <strong>
+                86/100
+              </strong>
 
               <span className="history-status">
-                Completed
+                {t(
+                  'record',
+                  'completed',
+                )}
               </span>
             </div>
 
@@ -268,13 +378,19 @@ function PatientRecord() {
               <span>—</span>
 
               <span>
-                Previous screening
+                {t(
+                  'record',
+                  'previousScreening',
+                )}
               </span>
 
               <span>—</span>
 
               <span className="history-status muted">
-                No previous record
+                {t(
+                  'record',
+                  'noPreviousRecord',
+                )}
               </span>
             </div>
 
@@ -290,15 +406,24 @@ function PatientRecord() {
 
           <div>
             <p className="section-kicker">
-              {t('record', 'nextCare')}
+              {t(
+                'record',
+                'nextCare',
+              )}
             </p>
 
             <h2>
-              {t('record', 'followUpTitle')}
+              {t(
+                'record',
+                'followUpTitle',
+              )}
             </h2>
 
             <p>
-              {t('record', 'followUpText')}
+              {t(
+                'record',
+                'followUpText',
+              )}
             </p>
           </div>
 
@@ -313,7 +438,11 @@ function PatientRecord() {
               })
             }
           >
-            {t('record', 'scheduleFollowUp')}
+            {t(
+              'record',
+              'scheduleFollowUp',
+            )}
+
             <ArrowRight size={17} />
           </button>
         </section>
@@ -324,7 +453,10 @@ function PatientRecord() {
           <Info size={16} />
 
           <p>
-            {t('record', 'disclaimer')}
+            {t(
+              'record',
+              'disclaimer',
+            )}
           </p>
         </div>
 
@@ -332,7 +464,10 @@ function PatientRecord() {
           <Info size={16} />
 
           <span>
-            {t('record', 'prototypeNote')}
+            {t(
+              'record',
+              'prototypeNote',
+            )}
           </span>
         </div>
 
@@ -347,14 +482,18 @@ function TimelineItem({
   description,
   status,
 }: {
-  icon: React.ReactNode
+  icon: ReactNode
   title: string
   description: string
-  status: 'completed' | 'current' | 'upcoming'
+  status:
+    | 'completed'
+    | 'current'
+    | 'upcoming'
 }) {
   return (
-    <div className={`care-timeline-item ${status}`}>
-
+    <div
+      className={`care-timeline-item ${status}`}
+    >
       <div className="care-timeline-marker">
         {icon}
       </div>
@@ -366,6 +505,7 @@ function TimelineItem({
           {status === 'completed' && (
             <span className="timeline-completed">
               <CheckCircle2 size={13} />
+
               Complete
             </span>
           )}
@@ -379,7 +519,6 @@ function TimelineItem({
 
         <p>{description}</p>
       </div>
-
     </div>
   )
 }

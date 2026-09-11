@@ -7,6 +7,7 @@ import {
   Settings,
   Users,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 interface SidebarProps {
   activeItem?: string
@@ -20,7 +21,12 @@ function Sidebar({ activeItem = 'Dashboard' }: SidebarProps) {
     { label: 'Referrals', icon: ClipboardList },
     { label: 'Health Records', icon: FileHeart },
   ]
+  const navigate = useNavigate()
 
+  const handleLogout = () => {
+    localStorage.removeItem('swasthone_role')
+    navigate('/login')
+  }
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -59,7 +65,11 @@ function Sidebar({ activeItem = 'Dashboard' }: SidebarProps) {
           <span>Settings</span>
         </button>
 
-        <button className="nav-item logout" type="button">
+        <button
+          className="nav-item logout"
+          type="button"
+          onClick={handleLogout}
+        >
           <LogOut size={19} />
           <span>Sign out</span>
         </button>
