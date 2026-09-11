@@ -1,6 +1,10 @@
-import { FormEvent, useState } from 'react'
+import { useState } from 'react'
+import type { SubmitEvent } from 'react'
 import { ArrowLeft, CheckCircle2, UserRound } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+
+import { saveOfflineRecord } from '../utils/offlineStorage'
+import { t, useLanguage } from '../i18n'
 
 interface PatientData {
   name: string
@@ -12,6 +16,7 @@ interface PatientData {
 }
 
 function PatientRegistration() {
+  useLanguage()
   const navigate = useNavigate()
 
   const [form, setForm] = useState<PatientData>({
@@ -35,11 +40,17 @@ function PatientRegistration() {
     }))
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (
+    event: SubmitEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault()
 
     if (!consent) {
       return
+    }
+
+    if (!navigator.onLine) {
+      saveOfflineRecord('patient', form)
     }
 
     navigate('/patients/profile', {
@@ -58,7 +69,7 @@ function PatientRegistration() {
           onClick={() => navigate('/')}
         >
           <ArrowLeft size={18} />
-          Back to dashboard
+          {t('registration', 'backToDashboard')}
         </button>
 
         <div className="form-header">
@@ -67,10 +78,16 @@ function PatientRegistration() {
           </div>
 
           <div>
-            <p className="section-kicker">Patient workflow</p>
-            <h1>Register a patient</h1>
+            <p className="section-kicker">
+              {t('registration', 'patientWorkflow')}
+            </p>
+
+            <h1>
+              {t('registration', 'title')}
+            </h1>
+
             <p>
-              Create a basic patient profile before starting screening.
+              {t('registration', 'description')}
             </p>
           </div>
         </div>
@@ -78,55 +95,76 @@ function PatientRegistration() {
         <div className="workflow-steps">
           <div className="workflow-step active">
             <span>1</span>
-            Registration
+            {t('registration', 'eyebrow')}
           </div>
 
           <div className="workflow-line" />
 
           <div className="workflow-step">
             <span>2</span>
-            Symptoms
+            {t('screening', 'symptomsStep')}
           </div>
 
           <div className="workflow-line" />
 
           <div className="workflow-step">
             <span>3</span>
-            Screening
+            {t('screening', 'rppg')}
           </div>
 
           <div className="workflow-line" />
 
           <div className="workflow-step">
             <span>4</span>
-            Triage
+            {t('screening', 'triage')}
           </div>
         </div>
 
-        <form className="registration-form" onSubmit={handleSubmit}>
+        <form
+          className="registration-form"
+          onSubmit={handleSubmit}
+        >
           <section className="form-section">
             <div className="form-section-heading">
-              <h2>Basic information</h2>
-              <p>Enter the patient's basic identifying details.</p>
+              <h2>
+                {t('registration', 'basicInformation')}
+              </h2>
+
+              <p>
+                {t(
+                  'registration',
+                  'basicInformationDescription',
+                )}
+              </p>
             </div>
 
             <div className="form-grid">
               <label className="field full-width">
-                <span>Full name *</span>
+                <span>
+                  {t('registration', 'fullName')} *
+                </span>
 
                 <input
                   type="text"
                   value={form.name}
                   onChange={(event) =>
-                    updateField('name', event.target.value)
+                    updateField(
+                      'name',
+                      event.target.value,
+                    )
                   }
-                  placeholder="Enter patient's full name"
+                  placeholder={t(
+                    'registration',
+                    'fullNamePlaceholder',
+                  )}
                   required
                 />
               </label>
 
               <label className="field">
-                <span>Age *</span>
+                <span>
+                  {t('registration', 'age')} *
+                </span>
 
                 <input
                   type="number"
@@ -134,29 +172,58 @@ function PatientRegistration() {
                   max="120"
                   value={form.age}
                   onChange={(event) =>
-                    updateField('age', event.target.value)
+                    updateField(
+                      'age',
+                      event.target.value,
+                    )
                   }
-                  placeholder="e.g. 42"
+                  placeholder={t(
+                    'registration',
+                    'agePlaceholder',
+                  )}
                   required
                 />
               </label>
 
               <label className="field">
-                <span>Gender *</span>
+                <span>
+                  {t('registration', 'gender')} *
+                </span>
 
                 <select
                   value={form.gender}
                   onChange={(event) =>
-                    updateField('gender', event.target.value)
+                    updateField(
+                      'gender',
+                      event.target.value,
+                    )
                   }
                   required
                 >
-                  <option value="">Select gender</option>
-                  <option value="Female">Female</option>
-                  <option value="Male">Male</option>
-                  <option value="Other">Other</option>
+                  <option value="">
+                    {t(
+                      'registration',
+                      'selectGender',
+                    )}
+                  </option>
+
+                  <option value="Female">
+                    {t('registration', 'female')}
+                  </option>
+
+                  <option value="Male">
+                    {t('registration', 'male')}
+                  </option>
+
+                  <option value="Other">
+                    {t('registration', 'other')}
+                  </option>
+
                   <option value="Prefer not to say">
-                    Prefer not to say
+                    {t(
+                      'registration',
+                      'preferNotToSay',
+                    )}
                   </option>
                 </select>
               </label>
@@ -165,42 +232,71 @@ function PatientRegistration() {
 
           <section className="form-section">
             <div className="form-section-heading">
-              <h2>Contact & location</h2>
-              <p>Useful for continuity and follow-up.</p>
+              <h2>
+                {t('registration', 'contactLocation')}
+              </h2>
+
+              <p>
+                {t(
+                  'registration',
+                  'contactLocationDescription',
+                )}
+              </p>
             </div>
 
             <div className="form-grid">
               <label className="field">
-                <span>Mobile number</span>
+                <span>
+                  {t('registration', 'phone')}
+                </span>
 
                 <input
                   type="tel"
                   inputMode="numeric"
                   value={form.phone}
                   onChange={(event) =>
-                    updateField('phone', event.target.value)
+                    updateField(
+                      'phone',
+                      event.target.value,
+                    )
                   }
-                  placeholder="10-digit mobile number"
+                  placeholder={t(
+                    'registration',
+                    'phonePlaceholder',
+                  )}
                   maxLength={10}
                 />
               </label>
 
               <label className="field">
-                <span>Village / locality *</span>
+                <span>
+                  {t('registration', 'village')} *
+                </span>
 
                 <input
                   type="text"
                   value={form.village}
                   onChange={(event) =>
-                    updateField('village', event.target.value)
+                    updateField(
+                      'village',
+                      event.target.value,
+                    )
                   }
-                  placeholder="Enter village or locality"
+                  placeholder={t(
+                    'registration',
+                    'villagePlaceholder',
+                  )}
                   required
                 />
               </label>
 
               <label className="field full-width">
-                <span>Emergency contact</span>
+                <span>
+                  {t(
+                    'registration',
+                    'emergencyContact',
+                  )}
+                </span>
 
                 <input
                   type="tel"
@@ -212,7 +308,10 @@ function PatientRegistration() {
                       event.target.value,
                     )
                   }
-                  placeholder="Emergency contact number"
+                  placeholder={t(
+                    'registration',
+                    'emergencyPlaceholder',
+                  )}
                   maxLength={10}
                 />
               </label>
@@ -230,8 +329,10 @@ function PatientRegistration() {
               />
 
               <span>
-                I confirm that the patient has provided consent for
-                registration and healthcare screening.
+                {t(
+                  'registration',
+                  'consentText',
+                )}
               </span>
             </label>
           </section>
@@ -242,7 +343,7 @@ function PatientRegistration() {
               type="button"
               onClick={() => navigate('/')}
             >
-              Cancel
+              {t('registration', 'cancel')}
             </button>
 
             <button
@@ -251,7 +352,11 @@ function PatientRegistration() {
               disabled={!consent}
             >
               <CheckCircle2 size={18} />
-              Register patient
+
+              {t(
+                'registration',
+                'continue',
+              )}
             </button>
           </div>
         </form>

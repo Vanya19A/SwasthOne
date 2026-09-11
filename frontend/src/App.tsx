@@ -12,6 +12,10 @@ import Referral from './pages/Referral'
 import ReferralTracking from './pages/ReferralTracking'
 import PatientRecord from './pages/PatientRecord'
 import FollowUp from './pages/FollowUp'
+import Login from './pages/Login'
+import ProtectedRoute from './components/ProtectedRoute'
+import Unauthorized from './pages/Unauthorized'
+import RoleDashboard from './pages/RoleDashboard'
 
 import {
   Activity,
@@ -359,24 +363,6 @@ function PatientRow({
    PLACEHOLDER
    ========================================================= */
 
-function Placeholder({
-  title,
-}: {
-  title: string
-}) {
-  return (
-    <div className="placeholder-page">
-      <Sidebar activeItem={title} />
-
-      <main className="main-content">
-        <h1>{title}</h1>
-        <p>This module is coming next.</p>
-      </main>
-
-      <BottomNav />
-    </div>
-  )
-}
 
 /* =========================================================
    APP ROUTES
@@ -390,7 +376,7 @@ function App() {
           path="/"
           element={<Dashboard />}
         />
-
+        <Route path="/login" element={<Login />} />
         <Route
           path="/patients/register"
           element={<PatientRegistration />}
@@ -400,6 +386,7 @@ function App() {
           path="/patients/profile"
           element={<PatientProfile />}
         />
+        <Route path="/unauthorized" element={<Unauthorized />} />
 
         <Route
           path="/screening"
@@ -409,6 +396,7 @@ function App() {
           path="/screening/rppg"
           element={<RPPGScreening />}
         />
+        
         <Route
           path="/screening/trustscore"
           element={<TrustScore />}
@@ -435,31 +423,26 @@ function App() {
           path="/follow-up"
           element={<FollowUp />}
         />
+        <Route element={<ProtectedRoute allowedRoles={['patient']} />}>
+          <Route
+            path="/patient"
+            element={<RoleDashboard role="patient" />}
+          />
+        </Route>
 
-        <Route
-          path="/patient"
-          element={
-            <Placeholder title="Patients" />
-          }
-        />
-        <Route
-          path="/asha"
-          element={<Dashboard />}
-        />
+        <Route element={<ProtectedRoute allowedRoles={['asha']} />}>
+          <Route
+            path="/asha"
+            element={<RoleDashboard role="asha" />}
+          />
+        </Route>
 
-        <Route
-          path="/doctor"
-          element={
-            <Placeholder title="Doctor Dashboard" />
-          }
-        />
-
-        <Route
-          path="/admin"
-          element={
-            <Placeholder title="Admin Dashboard" />
-          }
-        />
+        <Route element={<ProtectedRoute allowedRoles={['doctor']} />}>
+          <Route
+            path="/doctor"
+            element={<RoleDashboard role="doctor" />}
+          />
+        </Route>
       </Routes>
     </BrowserRouter>
   )

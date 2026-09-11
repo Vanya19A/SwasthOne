@@ -11,6 +11,7 @@ import {
   Wind,
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { t, useLanguage } from '../i18n'
 
 interface Patient {
   name: string
@@ -35,6 +36,8 @@ interface ScreeningData {
 type AnalysisState = 'processing' | 'result'
 
 function TrustScore() {
+  useLanguage()
+
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -104,7 +107,7 @@ function TrustScore() {
             onClick={handleRetake}
           >
             <ArrowLeft size={18} />
-            Back to screening
+            {t('common', 'back')}
           </button>
 
           <div className="form-heading">
@@ -114,16 +117,15 @@ function TrustScore() {
 
             <div>
               <p className="eyebrow">
-                Measurement confidence
+                {t('trustScore', 'eyebrow')}
               </p>
 
               <h1>
-                Checking your screening signal.
+                {t('trustScore', 'title')}
               </h1>
 
               <p>
-                SwasthOne checks the quality of the camera signal before
-                using the screening result.
+                {t('trustScore', 'description')}
               </p>
             </div>
           </div>
@@ -133,28 +135,40 @@ function TrustScore() {
         <div className="workflow">
           <div className="workflow-step completed">
             <span>✓</span>
-            <label>Registration</label>
+
+            <label>
+              {t('screening', 'registration')}
+            </label>
           </div>
 
           <div className="workflow-line active" />
 
           <div className="workflow-step completed">
             <span>✓</span>
-            <label>Symptoms</label>
+
+            <label>
+              {t('screening', 'symptomsStep')}
+            </label>
           </div>
 
           <div className="workflow-line active" />
 
           <div className="workflow-step completed">
             <span>✓</span>
-            <label>rPPG</label>
+
+            <label>
+              {t('screening', 'rppg')}
+            </label>
           </div>
 
           <div className="workflow-line active" />
 
           <div className="workflow-step active">
             <span>4</span>
-            <label>TrustScore</label>
+
+            <label>
+              {t('trustScore', 'trustScore')}
+            </label>
           </div>
         </div>
 
@@ -162,18 +176,31 @@ function TrustScore() {
         {patient && (
           <div className="patient-strip">
             <div>
-              <span>Screening for</span>
+              <span>
+                {t('screening', 'screeningFor')}
+              </span>
+
               <strong>{patient.name}</strong>
             </div>
 
             <div>
-              <span>Age</span>
-              <strong>{patient.age || '—'}</strong>
+              <span>
+                {t('screening', 'age')}
+              </span>
+
+              <strong>
+                {patient.age || '—'}
+              </strong>
             </div>
 
             <div>
-              <span>Village</span>
-              <strong>{patient.village || '—'}</strong>
+              <span>
+                {t('screening', 'village')}
+              </span>
+
+              <strong>
+                {patient.village || '—'}
+              </strong>
             </div>
           </div>
         )}
@@ -186,26 +213,46 @@ function TrustScore() {
               </div>
             </div>
 
-            <h2>Analyzing signal quality...</h2>
+            <h2>
+              {t(
+                'trustScore',
+                'processing',
+              )}
+            </h2>
 
             <p>
-              Checking lighting, movement and signal consistency.
+              {t(
+                'trustScore',
+                'processingTime',
+              )}
             </p>
 
             <div className="analysis-checks">
               <div>
                 <span className="check-loading" />
-                Signal quality
+
+                {t(
+                  'trustScore',
+                  'qualityFactors',
+                )}
               </div>
 
               <div>
                 <span className="check-loading" />
-                Face stability
+
+                {t(
+                  'trustScore',
+                  'faceStability',
+                )}
               </div>
 
               <div>
                 <span className="check-loading" />
-                Measurement consistency
+
+                {t(
+                  'trustScore',
+                  'measurementConsistency',
+                )}
               </div>
             </div>
           </section>
@@ -216,58 +263,94 @@ function TrustScore() {
               <div className="trust-result-header">
                 <div>
                   <p className="section-kicker">
-                    SCREENING CONFIDENCE
+                    {t(
+                      'trustScore',
+                      'eyebrow',
+                    )}
                   </p>
 
                   <h2>
-                    Measurement quality
+                    {t(
+                      'trustScore',
+                      'measurementQuality',
+                    )}
                   </h2>
                 </div>
 
                 {isHighConfidence ? (
                   <span className="confidence-badge high">
                     <CheckCircle2 size={15} />
-                    High confidence
+
+                    {t(
+                      'trustScore',
+                      'high',
+                    )}
                   </span>
                 ) : (
                   <span className="confidence-badge low">
                     <AlertTriangle size={15} />
-                    Low confidence
+
+                    {t(
+                      'trustScore',
+                      'low',
+                    )}
                   </span>
                 )}
               </div>
 
               <div className="trust-score-layout">
-                <div className={`trust-score-circle ${scoreColorClass}`}>
+                <div
+                  className={`trust-score-circle ${scoreColorClass}`}
+                >
                   <div>
-                    <strong>{trustScore}</strong>
-                    <span>/100</span>
+                    <strong>
+                      {trustScore}
+                    </strong>
+
+                    <span>
+                      /100
+                    </span>
                   </div>
 
-                  <small>TrustScore</small>
+                  <small>
+                    {t(
+                      'trustScore',
+                      'trustScore',
+                    )}
+                  </small>
                 </div>
 
                 <div className="trust-summary">
                   {isHighConfidence ? (
                     <>
                       <h3>
-                        Signal quality looks good.
+                        {t(
+                          'trustScore',
+                          'good',
+                        )}
                       </h3>
 
                       <p>
-                        The captured signal passed the current quality
-                        checks and can continue to the screening workflow.
+                        {t(
+                          'trustScore',
+                          'goodDescription',
+                        )}
                       </p>
                     </>
                   ) : (
                     <>
                       <h3>
-                        We need a clearer measurement.
+                        {t(
+                          'trustScore',
+                          'retake',
+                        )}
                       </h3>
 
                       <p>
-                        The signal quality is not strong enough to
-                        confidently use this reading.
+                        {t(
+                          'trustScore',
+                          'lowDescription',
+                        )}
                       </p>
                     </>
                   )}
@@ -277,26 +360,50 @@ function TrustScore() {
               {/* Quality factors */}
               <div className="quality-grid">
                 <QualityItem
-                  label="Signal quality"
-                  value="Good"
+                  label={t(
+                    'trustScore',
+                    'signalQuality',
+                  )}
+                  value={t(
+                    'trustScore',
+                    'good',
+                  )}
                   good={true}
                 />
 
                 <QualityItem
-                  label="Movement"
-                  value="Stable"
+                  label={t(
+                    'trustScore',
+                    'movement',
+                  )}
+                  value={t(
+                    'trustScore',
+                    'stable',
+                  )}
                   good={true}
                 />
 
                 <QualityItem
-                  label="Lighting"
-                  value="Good"
+                  label={t(
+                    'trustScore',
+                    'lighting',
+                  )}
+                  value={t(
+                    'trustScore',
+                    'good',
+                  )}
                   good={true}
                 />
 
                 <QualityItem
-                  label="Face stability"
-                  value="Stable"
+                  label={t(
+                    'trustScore',
+                    'faceStability',
+                  )}
+                  value={t(
+                    'trustScore',
+                    'stable',
+                  )}
                   good={true}
                 />
               </div>
@@ -312,12 +419,18 @@ function TrustScore() {
                     </span>
 
                     <h2>
-                      Screening information
+                      {t(
+                        'trustScore',
+                        'screeningInformation',
+                      )}
                     </h2>
                   </div>
 
                   <p>
-                    Subject to clinical confirmation
+                    {t(
+                      'trustScore',
+                      'clinicalConfirmation',
+                    )}
                   </p>
                 </div>
 
@@ -329,11 +442,17 @@ function TrustScore() {
 
                     <div>
                       <span>
-                        Heart rate
+                        {t(
+                          'trustScore',
+                          'heartRate',
+                        )}
                       </span>
 
                       <strong>
-                        Awaiting analysis
+                        {t(
+                          'trustScore',
+                          'awaitingAnalysis',
+                        )}
                       </strong>
 
                       <small>
@@ -349,11 +468,17 @@ function TrustScore() {
 
                     <div>
                       <span>
-                        Heart-rate variability
+                        {t(
+                          'trustScore',
+                          'heartRateVariability',
+                        )}
                       </span>
 
                       <strong>
-                        Awaiting analysis
+                        {t(
+                          'trustScore',
+                          'awaitingAnalysis',
+                        )}
                       </strong>
 
                       <small>
@@ -369,11 +494,17 @@ function TrustScore() {
 
                     <div>
                       <span>
-                        Respiratory rate
+                        {t(
+                          'trustScore',
+                          'respiratoryRate',
+                        )}
                       </span>
 
                       <strong>
-                        Awaiting analysis
+                        {t(
+                          'trustScore',
+                          'awaitingAnalysis',
+                        )}
                       </strong>
 
                       <small>
@@ -402,14 +533,26 @@ function TrustScore() {
               <div>
                 <strong>
                   {isHighConfidence
-                    ? 'Confidence check passed'
-                    : 'Please retake the measurement'}
+                    ? t(
+                        'trustScore',
+                        'confidencePassed',
+                      )
+                    : t(
+                        'trustScore',
+                        'retake',
+                      )}
                 </strong>
 
                 <p>
                   {isHighConfidence
-                    ? 'The TrustScore indicates that this capture has sufficient signal quality for screening support. Any concerning result should still be confirmed using clinically validated measurements.'
-                    : 'Movement, lighting or signal quality may have affected this capture. Retake the measurement or use manual measurements from a healthcare worker.'}
+                    ? t(
+                        'trustScore',
+                        'confidencePassedDescription',
+                      )
+                    : t(
+                        'trustScore',
+                        'retakeDescription',
+                      )}
                 </p>
               </div>
             </section>
@@ -419,9 +562,17 @@ function TrustScore() {
               <Info size={16} />
 
               <p>
-                <strong>Screening support only.</strong>{' '}
-                rPPG is not a diagnosis and does not replace clinical
-                examination or validated medical equipment.
+                <strong>
+                  {t(
+                    'trustScore',
+                    'safetyTitle',
+                  )}
+                </strong>{' '}
+
+                {t(
+                  'trustScore',
+                  'safetyText',
+                )}
               </p>
             </div>
 
@@ -432,7 +583,10 @@ function TrustScore() {
                 type="button"
                 onClick={handleRetake}
               >
-                Retake measurement
+                {t(
+                  'trustScore',
+                  'retake',
+                )}
               </button>
 
               <button
@@ -441,7 +595,11 @@ function TrustScore() {
                 onClick={handleContinue}
                 disabled={!isHighConfidence}
               >
-                Continue to triage
+                {t(
+                  'trustScore',
+                  'continueTriage',
+                )}
+
                 <ArrowRight size={18} />
               </button>
             </div>
@@ -451,9 +609,10 @@ function TrustScore() {
               <Info size={16} />
 
               <span>
-                Prototype UI: TrustScore and measurement values will be
-                supplied by the rPPG processing service. No clinical result
-                is being generated by this frontend screen.
+                {t(
+                  'trustScore',
+                  'prototypeNote',
+                )}
               </span>
             </div>
           </>
@@ -474,10 +633,15 @@ function QualityItem({
 }) {
   return (
     <div className="quality-item">
-      <div className={`quality-indicator ${good ? 'good' : 'bad'}`} />
+      <div
+        className={`quality-indicator ${
+          good ? 'good' : 'bad'
+        }`}
+      />
 
       <div>
         <span>{label}</span>
+
         <strong>{value}</strong>
       </div>
     </div>

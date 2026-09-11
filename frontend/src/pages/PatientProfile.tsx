@@ -1,5 +1,6 @@
 import { ArrowRight, CalendarDays, MapPin, Phone, UserRound } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { t, useLanguage } from '../i18n'
 
 interface Patient {
   name: string
@@ -11,6 +12,7 @@ interface Patient {
 }
 
 function PatientProfile() {
+  useLanguage()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -20,15 +22,15 @@ function PatientProfile() {
     return (
       <div className="app-shell">
         <main className="form-page">
-          <h1>Patient not found</h1>
-          <p>Please register a patient first.</p>
+          <h1>{t('profile', 'notFound')}</h1>
+          <p>{t('profile', 'registerFirst')}</p>
 
           <button
             className="primary-button"
             type="button"
             onClick={() => navigate('/patients/register')}
           >
-            Register patient
+            {t('profile', 'registerPatient')}
           </button>
         </main>
       </div>
@@ -43,7 +45,7 @@ function PatientProfile() {
           type="button"
           onClick={() => navigate('/patients/register')}
         >
-          ← Back to registration
+          ← {t('profile', 'backToRegistration')}
         </button>
 
         <div className="profile-header">
@@ -57,15 +59,19 @@ function PatientProfile() {
           </div>
 
           <div>
-            <p className="section-kicker">Patient profile</p>
+            <p className="section-kicker">
+              {t('profile', 'eyebrow')}
+            </p>
+
             <h1>{patient.name}</h1>
+
             <p>
-              Patient registration completed successfully.
+              {t('profile', 'registrationSuccess')}
             </p>
           </div>
 
           <span className="registered-badge">
-            Registered
+            {t('profile', 'registered')}
           </span>
         </div>
 
@@ -76,9 +82,9 @@ function PatientProfile() {
             </div>
 
             <div>
-              <span>Age & gender</span>
+              <span>{t('profile', 'ageGender')}</span>
               <strong>
-                {patient.age} years · {patient.gender}
+                {patient.age} {t('profile', 'years')} · {patient.gender}
               </strong>
             </div>
           </div>
@@ -89,9 +95,9 @@ function PatientProfile() {
             </div>
 
             <div>
-              <span>Mobile</span>
+              <span>{t('profile', 'mobile')}</span>
               <strong>
-                {patient.phone || 'Not provided'}
+                {patient.phone || t('profile', 'notProvided')}
               </strong>
             </div>
           </div>
@@ -102,7 +108,7 @@ function PatientProfile() {
             </div>
 
             <div>
-              <span>Location</span>
+              <span>{t('profile', 'location')}</span>
               <strong>{patient.village}</strong>
             </div>
           </div>
@@ -113,37 +119,43 @@ function PatientProfile() {
             </div>
 
             <div>
-              <span>Registration</span>
-              <strong>Today</strong>
+              <span>{t('profile', 'registration')}</span>
+              <strong>{t('profile', 'today')}</strong>
             </div>
           </div>
         </section>
 
         <section className="next-step-card">
           <div>
-            <p className="section-kicker">Next step</p>
-            <h2>Start health screening</h2>
+            <p className="section-kicker">
+              {t('profile', 'nextStep')}
+            </p>
+
+            <h2>
+              {t('profile', 'startHealthScreening')}
+            </h2>
+
             <p>
-              Record symptoms and basic vitals before the
-              screening assessment.
+              {t('profile', 'screeningDescription')}
             </p>
           </div>
 
           <button
             className="primary-button"
             type="button"
-            onClick={() => navigate('/screening', {
-              state: { patient },
-            })}
+            onClick={() =>
+              navigate('/screening', {
+                state: { patient },
+              })
+            }
           >
-            Continue
+            {t('profile', 'continue')}
             <ArrowRight size={18} />
           </button>
         </section>
 
         <div className="profile-safety-note">
-          Patient information should only be accessed by authorized
-          healthcare personnel.
+          {t('profile', 'safetyNote')}
         </div>
       </main>
     </div>

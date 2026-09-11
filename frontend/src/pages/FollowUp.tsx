@@ -77,8 +77,13 @@ function FollowUp() {
           </div>
 
           <div>
-            <span>{t('followUp', 'patient')}</span>
-            <strong>{patientData.name}</strong>
+            <span>
+              {t('followUp', 'patient')}
+            </span>
+
+            <strong>
+              {patientData.name}
+            </strong>
 
             <p>
               {patientData.village || '—'}
@@ -111,11 +116,13 @@ function FollowUp() {
 
               <div>
                 <strong>
-                  Tomorrow
+                  {t('screening', 'today') === 'Today'
+                    ? 'Tomorrow'
+                    : t('followUp', 'tomorrow')}
                 </strong>
 
                 <span>
-                  Recommended follow-up
+                  {t('followUp', 'recommendedFollowUp')}
                 </span>
               </div>
 
@@ -130,11 +137,11 @@ function FollowUp() {
 
               <div>
                 <strong>
-                  In 3 days
+                  {t('followUp', 'in3Days')}
                 </strong>
 
                 <span>
-                  Standard follow-up
+                  {t('followUp', 'standardFollowUp')}
                 </span>
               </div>
             </button>
@@ -147,11 +154,11 @@ function FollowUp() {
 
               <div>
                 <strong>
-                  In 7 days
+                  {t('followUp', 'in7Days')}
                 </strong>
 
                 <span>
-                  Later follow-up
+                  {t('followUp', 'laterFollowUp')}
                 </span>
               </div>
             </button>
@@ -262,6 +269,7 @@ function FollowUp() {
             }
           >
             <CheckCircle2 size={17} />
+
             {t('followUp', 'confirm')}
           </button>
         </div>
