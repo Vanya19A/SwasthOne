@@ -4,6 +4,7 @@ const helmet = require("helmet");
 
 const authRoutes = require("./routes/authRoutes");
 const patientRoutes = require("./routes/patientRoutes");
+const screeningRoutes = require("./routes/screeningRoutes");
 
 const app = express();
 
@@ -21,5 +22,6 @@ app.get("/api/health", (req, res) => {
 // Authentication routes
 app.use("/api/auth", authRoutes);
 app.use("/api/patients", patientRoutes);
+app.use("/api/screenings", screeningRoutes);
 
 module.exports = app;
