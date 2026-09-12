@@ -17,15 +17,13 @@ import { runTriage } from '../services/triageService'
 import type {
   TriageInput,
 } from '../types/triage'
+import {
+  getPatientRecord,
+  savePatientRecord,
+} from '../utils/patientRecordStorage'
+import type { PatientProfile } from '../types/patientRecord'
 
-interface Patient {
-  name: string
-  age: string
-  gender: string
-  phone: string
-  village: string
-  emergencyContact: string
-}
+
 
 interface ScreeningData {
   symptoms: string[]
@@ -56,7 +54,7 @@ function Triage() {
   const location = useLocation()
 
   const patient =
-    location.state?.patient as Patient | undefined
+    location.state?.patient as PatientProfile | undefined
 
   const screening =
     location.state?.screening as
@@ -279,6 +277,28 @@ function Triage() {
   }
 
   const handleContinue = () => {
+    if (patient?.patientId) {
+      const patientRecord = getPatientRecord(
+        patient.patientId,
+      )
+
+      if (patientRecord) {
+        patientRecord.triageHistory.push({
+          triageId: crypto.randomUUID(),
+          patientId: patient.patientId,
+          screeningId: undefined,
+          recordedAt: new Date().toISOString(),
+          category,
+          reasons: triageResult.reasons,
+          measurementAction:
+            triageResult.measurementAction,
+          requiresProfessionalReview:
+            triageResult.requiresProfessionalReview,
+        })
+
+        savePatientRecord(patientRecord)
+      }
+    }
     navigate(
       '/referral',
       {

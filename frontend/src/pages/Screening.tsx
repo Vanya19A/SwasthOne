@@ -4,15 +4,8 @@ import { ArrowLeft, ArrowRight, Check, HeartPulse, Stethoscope } from 'lucide-re
 import { useLocation, useNavigate } from 'react-router-dom'
 import { saveOfflineRecord } from '../utils/offlineStorage'
 import { t, useLanguage } from '../i18n'
-
-interface Patient {
-  name: string
-  age: string
-  gender: string
-  phone: string
-  village: string
-  emergencyContact: string
-}
+import { getPatientRecord, savePatientRecord } from '../utils/patientRecordStorage'
+import type { PatientProfile } from '../types/patientRecord'
 
 
 const symptomOptions = [
@@ -31,7 +24,7 @@ function Screening() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const patient = location.state?.patient as Patient | undefined
+  const patient = location.state?.patient as PatientProfile | undefined
 
   const [symptoms, setSymptoms] = useState<string[]>([])
   const [duration, setDuration] = useState('')
@@ -56,15 +49,46 @@ function Screening() {
     event.preventDefault()
 
     const screeningData = {
+  symptoms,
+  duration,
+  severity,
+  hasManualVitals,
+  bloodPressure,
+  pulse,
+  temperature,
+  oxygenSaturation,
+}
+
+if (patient?.patientId) {
+  const patientRecord = getPatientRecord(patient.patientId)
+
+  if (patientRecord) {
+    patientRecord.screenings.push({
+      screeningId: crypto.randomUUID(),
+      patientId: patient.patientId,
+      recordedAt: new Date().toISOString(),
       symptoms,
-      duration,
-      severity,
-      hasManualVitals,
-      bloodPressure,
-      pulse,
-      temperature,
-      oxygenSaturation,
-    }
+      duration: duration || undefined,
+      severity: severity || undefined,
+      manualVitals: hasManualVitals
+        ? {
+            bloodPressure: bloodPressure || undefined,
+            pulse: pulse
+              ? Number(pulse)
+              : undefined,
+            temperature: temperature
+              ? Number(temperature)
+              : undefined,
+            oxygenSaturation: oxygenSaturation
+              ? Number(oxygenSaturation)
+              : undefined,
+          }
+        : undefined,
+    })
+
+    savePatientRecord(patientRecord)
+  }
+}
 
     if (!navigator.onLine) {
       saveOfflineRecord('screening', {

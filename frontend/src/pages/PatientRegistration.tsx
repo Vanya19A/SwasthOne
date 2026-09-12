@@ -5,6 +5,10 @@ import { useNavigate } from 'react-router-dom'
 
 import { saveOfflineRecord } from '../utils/offlineStorage'
 import { t, useLanguage } from '../i18n'
+import type {
+  PatientProfile,
+} from '../types/patientRecord'
+import { savePatientRecord } from '../utils/patientRecordStorage'
 
 interface PatientData {
   name: string
@@ -41,24 +45,52 @@ function PatientRegistration() {
   }
 
   const handleSubmit = (
-    event: SubmitEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault()
+  event: SubmitEvent<HTMLFormElement>,
+) => {
+  event.preventDefault()
 
-    if (!consent) {
-      return
-    }
-
-    if (!navigator.onLine) {
-      saveOfflineRecord('patient', form)
-    }
-
-    navigate('/patients/profile', {
-      state: {
-        patient: form,
-      },
-    })
+  if (!consent) {
+    return
   }
+
+  const patient: PatientProfile = {
+    patientId: crypto.randomUUID(),
+    name: form.name,
+    age: Number(form.age),
+    gender:
+      form.gender === 'Female'
+        ? 'female'
+        : form.gender === 'Male'
+          ? 'male'
+          : form.gender === 'Other'
+            ? 'other'
+            : 'unknown',
+    phone: form.phone || undefined,
+    village: form.village,
+    emergencyContact:
+      form.emergencyContact || undefined,
+    createdAt: new Date().toISOString(),
+  }
+  const patientRecord = {
+  patient,
+  screenings: [],
+  triageHistory: [],
+  referrals: [],
+  followUps: [],
+  }
+
+  savePatientRecord(patientRecord)
+
+  if (!navigator.onLine) {
+    saveOfflineRecord('patient', patient)
+  }
+
+  navigate('/patients/profile', {
+    state: {
+      patient,
+    },
+  })
+}
 
   return (
     <div className="app-shell">

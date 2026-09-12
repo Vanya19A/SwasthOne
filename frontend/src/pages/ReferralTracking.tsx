@@ -12,6 +12,13 @@ import {
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { t, useLanguage } from '../i18n'
+import {
+  getPatientRecord,
+} from '../utils/patientRecordStorage'
+import type {
+  PatientProfile,
+  ReferralRecord,
+} from '../types/patientRecord'
 
 function ReferralTracking() {
   useLanguage()
@@ -19,10 +26,21 @@ function ReferralTracking() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const patient = location.state?.patient
+  const patient = location.state?.patient as PatientProfile | undefined
+
+  const storedRecord = patient?.patientId
+    ? getPatientRecord(patient.patientId)
+    : undefined
+
+  const latestReferral: ReferralRecord | undefined =
+    storedRecord && storedRecord.referrals.length > 0
+      ? storedRecord.referrals[
+          storedRecord.referrals.length - 1
+        ]
+      : undefined
 
   const facility = location.state?.facility ?? {
-    name: 'Primary Health Centre',
+    name: latestReferral?.destination ?? 'Primary Health Centre',
     type: 'PHC',
     distance: '3.2 km',
   }
@@ -135,7 +153,9 @@ function ReferralTracking() {
 
           <span className="tracking-status-badge">
             <Clock3 size={14} />
-            Pending acceptance
+            {latestReferral?.status === 'pending'
+              ? 'Pending acceptance'
+              : latestReferral?.status ?? 'Pending acceptance'}
           </span>
         </section>
 

@@ -13,15 +13,15 @@ import {
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { t, useLanguage } from '../i18n'
+import type {
+  PatientProfile,
+  ReferralRecord,
+} from '../types/patientRecord'
+import {
+  getPatientRecord,
+  savePatientRecord,
+} from '../utils/patientRecordStorage'
 
-interface Patient {
-  name: string
-  age: string
-  gender: string
-  phone: string
-  village: string
-  emergencyContact: string
-}
 
 interface ScreeningData {
   symptoms: string[]
@@ -45,6 +45,12 @@ interface TriageData {
     | 'routine'
     | 'consult'
     | 'urgent'
+  reasons?: string[]
+  measurementAction?:
+    | 'none'
+    | 'retake-rppg'
+    | 'manual-verify'
+  requiresProfessionalReview?: boolean
   demoMode?: boolean
 }
 
@@ -66,7 +72,7 @@ function Referral() {
 
   const patient =
     location.state?.patient as
-      | Patient
+      | PatientProfile
       | undefined
 
   const screening =
@@ -129,14 +135,39 @@ function Referral() {
   }
 
   const handleCreateReferral = () => {
+    if (patient?.patientId) {
+      const patientRecord = getPatientRecord(
+        patient.patientId,
+      )
+
+      if (patientRecord) {
+        const referral: ReferralRecord = {
+          referralId: crypto.randomUUID(),
+          patientId: patient.patientId,
+          screeningId: undefined,
+          triageId: undefined,
+          createdAt: new Date().toISOString(),
+          destination: selectedFacility.name,
+          reason:
+            triage?.category === 'urgent'
+              ? 'Urgent clinical review'
+              : 'Clinical review',
+          status: 'pending',
+        }
+
+        patientRecord.referrals.push(referral)
+
+        savePatientRecord(patientRecord)
+      }
+    }
+
     navigate('/referral/tracking', {
       state: {
         patient,
         screening,
         rppg,
         triage,
-        facility:
-          selectedFacility,
+        facility: selectedFacility,
       },
     })
   }

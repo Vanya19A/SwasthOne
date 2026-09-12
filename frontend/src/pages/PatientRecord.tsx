@@ -16,22 +16,36 @@ import {
 import type { ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { t, useLanguage } from '../i18n'
+import { getPatientRecord } from '../utils/patientRecordStorage'
 
 function PatientRecord() {
   useLanguage()
 
   const navigate = useNavigate()
   const location = useLocation()
+  const patientFromState = location.state?.patient
 
-  const patient = location.state?.patient
+  const storedRecord = patientFromState?.patientId
+    ? getPatientRecord(patientFromState.patientId)
+    : undefined
+
+  const patient = storedRecord?.patient ?? patientFromState
+
+  // const patient = location.state?.patient
 
   const patientData = patient ?? {
     name: 'Patient',
-    age: '—',
+    age: 0,
     gender: '—',
     phone: '—',
     village: '—',
   }
+  const latestScreening =
+    storedRecord && storedRecord.screenings.length > 0
+      ? storedRecord.screenings[
+          storedRecord.screenings.length - 1
+        ]
+      : undefined
 
   return (
     <div className="page-shell">
@@ -100,8 +114,9 @@ function PatientRecord() {
               <span>
                 <UserRound size={14} />
 
-                {patientData.age}{' '}
-                {t('profile', 'years')}
+                {patientData.age > 0
+                ? `${patientData.age} ${t('profile', 'years')}`
+                : '—'}
               </span>
 
               <span>
@@ -148,7 +163,11 @@ function PatientRecord() {
               </span>
 
               <strong>
-                {t('record', 'today')}
+                {latestScreening
+                  ? new Date(
+                      latestScreening.recordedAt,
+                    ).toLocaleDateString()
+                  : '—'}
               </strong>
             </div>
           </div>
@@ -353,47 +372,52 @@ function PatientRecord() {
               </span>
             </div>
 
-            <div className="history-row">
-              <span>
-                10 Sep 2026
-              </span>
+            {latestScreening ? (
+              <div className="history-row">
+                <span>
+                  {new Date(
+                    latestScreening.recordedAt,
+                  ).toLocaleDateString()}
+                </span>
 
-              <span>
-                rPPG screening
-              </span>
+                <span>
+                  {latestScreening.symptoms.length > 0
+                    ? latestScreening.symptoms.join(', ')
+                    : 'General screening'}
+                </span>
 
-              <strong>
-                86/100
-              </strong>
+                <strong>
+                  —
+                </strong>
 
-              <span className="history-status">
-                {t(
-                  'record',
-                  'completed',
-                )}
-              </span>
-            </div>
+                <span className="history-status">
+                  {t(
+                    'record',
+                    'completed',
+                  )}
+                </span>
+              </div>
+            ) : (
+              <div className="history-row">
+                <span>—</span>
 
-            <div className="history-row">
-              <span>—</span>
+                <span>
+                  {t(
+                    'record',
+                    'previousScreening',
+                  )}
+                </span>
 
-              <span>
-                {t(
-                  'record',
-                  'previousScreening',
-                )}
-              </span>
+                <span>—</span>
 
-              <span>—</span>
-
-              <span className="history-status muted">
-                {t(
-                  'record',
-                  'noPreviousRecord',
-                )}
-              </span>
-            </div>
-
+                <span className="history-status muted">
+                  {t(
+                    'record',
+                    'noPreviousRecord',
+                  )}
+                </span>
+              </div>
+            )}
           </div>
         </section>
 

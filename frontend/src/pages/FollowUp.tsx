@@ -10,6 +10,14 @@ import {
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { t, useLanguage } from '../i18n'
+import {
+  getPatientRecord,
+  savePatientRecord,
+} from '../utils/patientRecordStorage'
+import type {
+  PatientProfile,
+  FollowUpRecord,
+} from '../types/patientRecord'
 
 function FollowUp() {
   useLanguage()
@@ -17,7 +25,7 @@ function FollowUp() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const patient = location.state?.patient
+  const patient = location.state?.patient as PatientProfile | undefined
 
   const patientData = patient ?? {
     name: 'Patient',
@@ -256,17 +264,31 @@ function FollowUp() {
           <button
             className="primary-button"
             type="button"
-            onClick={() =>
+            onClick={() => {
+              if (patient?.patientId) {
+                const patientRecord = getPatientRecord(patient.patientId)
+
+                if (patientRecord) {
+                  const followUp: FollowUpRecord = {
+                    followUpId: crypto.randomUUID(),
+                    patientId: patient.patientId,
+                    createdAt: new Date().toISOString(),
+                    scheduledDate: 'Tomorrow',
+                    reminderMethod: 'sms',
+                    status: 'scheduled',
+                  }
+
+                  patientRecord.followUps.push(followUp)
+                  savePatientRecord(patientRecord)
+                }
+              }
+
               navigate('/patient-record', {
                 state: {
                   patient: patientData,
-                  followUp: {
-                    scheduled: true,
-                    date: 'Tomorrow',
-                  },
                 },
               })
-            }
+            }}
           >
             <CheckCircle2 size={17} />
 
