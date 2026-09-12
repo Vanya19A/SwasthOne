@@ -1,8 +1,6 @@
 # SwasthOne
 Nexify – AI-assisted rural healthcare access, screening, referral and follow-up platform.
 
-## SIH 2026
-
 SwasthOne is an integrated healthcare access and quality support platform designed for rural and underserved communities.
 
 The platform aims to support:
@@ -18,8 +16,3 @@ The platform aims to support:
 ## Team
 
 Team Nexify
-
-## Project Status
-
-🚧 Under development for Smart India Hackathon 2026.
-SwasthOne SIH 2026 - Project Setup
