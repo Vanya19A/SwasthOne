@@ -6,6 +6,7 @@ const authRoutes = require("./routes/authRoutes");
 const patientRoutes = require("./routes/patientRoutes");
 const screeningRoutes = require("./routes/screeningRoutes");
 const rppgRoutes = require("./routes/rppgRoutes");
+const triageRoutes = require("./routes/triageRoutes");
 
 const app = express();
 
@@ -25,5 +26,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/patients", patientRoutes);
 app.use("/api/screenings", screeningRoutes);
 app.use("/api/rppg", rppgRoutes);
+app.use("/api/triage", triageRoutes);
 
 module.exports = app;
