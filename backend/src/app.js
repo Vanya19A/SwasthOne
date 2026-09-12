@@ -9,6 +9,7 @@ const rppgRoutes = require("./routes/rppgRoutes");
 const triageRoutes = require("./routes/triageRoutes");
 const referralRoutes = require("./routes/referralRoutes");
 const facilityRoutes = require("./routes/facilityRoutes");
+const followUpRoutes = require("./routes/followUpRoutes");
 
 const app = express();
 
@@ -31,5 +32,6 @@ app.use("/api/rppg", rppgRoutes);
 app.use("/api/triage", triageRoutes);
 app.use("/api/referrals", referralRoutes);
 app.use("/api/facilities", facilityRoutes);
+app.use("/api/follow-ups", followUpRoutes);
 
 module.exports = app;
