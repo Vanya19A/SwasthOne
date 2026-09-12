@@ -1,5 +1,6 @@
 const Referral = require("../models/Referral");
 const Patient = require("../models/Patient");
+const Facility = require("../models/Facility");
 
 const createReferral = async (req, res) => {
   try {
@@ -31,7 +32,17 @@ const createReferral = async (req, res) => {
         message: "Patient not found",
       });
     }
+    const facility = await Facility.findOne({
+        facilityId,
+        isActive: true,
+    });
 
+    if (!facility) {
+        return res.status(404).json({
+        success: false,
+        message: "Facility not found or inactive",
+    });
+    }
     const referral = await Referral.create({
       patient: patient._id,
       triageCategory,
