@@ -8,8 +8,15 @@ import {
   ShieldCheck,
   Stethoscope,
 } from 'lucide-react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import {
+  useLocation,
+  useNavigate,
+} from 'react-router-dom'
 import { t, useLanguage } from '../i18n'
+import { runTriage } from '../services/triageService'
+import type {
+  TriageInput,
+} from '../types/triage'
 
 interface Patient {
   name: string
@@ -35,9 +42,12 @@ interface RPPGData {
   trustScore: number
   confidence: 'high' | 'low'
   demoMode?: boolean
+  heartRate?: number
+  heartRateVariability?: number
+  respiratoryRate?: number
+  systolicBP?: number
+  diastolicBP?: number
 }
-
-type TriageCategory = 'routine' | 'consult' | 'urgent'
 
 function Triage() {
   useLanguage()
@@ -45,98 +55,262 @@ function Triage() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const patient = location.state?.patient as Patient | undefined
-  const screening = location.state?.screening as ScreeningData | undefined
-  const rppg = location.state?.rppg as RPPGData | undefined
+  const patient =
+    location.state?.patient as Patient | undefined
+
+  const screening =
+    location.state?.screening as
+      | ScreeningData
+      | undefined
+
+  const rppg =
+    location.state?.rppg as
+      | RPPGData
+      | undefined
 
   /*
-   * TEMPORARY FRONTEND DEMO RULES
+   * ==========================================
+   * DATA PREPARATION
+   * ==========================================
    *
-   * The real triage engine will eventually provide this result.
-   * These rules are only here so the complete prototype flow works.
+   * Screening and TrustScore currently pass
+   * their data through React Router state.
+   *
+   * We convert that existing data into the
+   * standard TriageInput contract.
    */
 
-  const getTriageCategory = (): TriageCategory => {
-    const symptoms = screening?.symptoms ?? []
-
-    const hasChestDiscomfort =
-      symptoms.includes('Chest discomfort')
-
-    const hasBreathingDifficulty =
-      symptoms.includes('Breathing difficulty')
-
-    const hasFever =
-      symptoms.includes('Fever')
-
-    const pulse = Number(screening?.pulse || 0)
-
-    if (
-      hasChestDiscomfort ||
-      hasBreathingDifficulty
-    ) {
-      return 'urgent'
+  const parseNumber = (
+    value: string | undefined,
+  ): number | undefined => {
+    if (!value || value.trim() === '') {
+      return undefined
     }
 
-    if (
-      hasFever &&
-      pulse > 100
-    ) {
-      return 'consult'
-    }
+    const parsed = Number(value)
 
-    return 'routine'
+    return Number.isFinite(parsed)
+      ? parsed
+      : undefined
   }
 
-  const category = getTriageCategory()
+  const parseBloodPressure = (
+    value: string | undefined,
+  ) => {
+    if (!value || value.trim() === '') {
+      return {
+        systolicBP: undefined,
+        diastolicBP: undefined,
+      }
+    }
+
+    const parts = value.split('/')
+
+    return {
+      systolicBP: parseNumber(parts[0]),
+      diastolicBP: parseNumber(parts[1]),
+    }
+  }
+
+  const bloodPressure =
+    parseBloodPressure(
+      screening?.bloodPressure,
+    )
+
+  const triageInput: TriageInput = {
+    patient: {
+      age: Number(patient?.age || 0),
+      gender: patient?.gender,
+    },
+
+    symptoms:
+      screening?.symptoms ?? [],
+
+    duration:
+      screening?.duration,
+
+    severity:
+      screening?.severity,
+
+    manualVitals:
+      screening?.hasManualVitals
+        ? {
+            pulse: parseNumber(
+              screening?.pulse,
+            ),
+
+            temperature: parseNumber(
+              screening?.temperature,
+            ),
+
+            systolicBP:
+              bloodPressure.systolicBP,
+
+            diastolicBP:
+              bloodPressure.diastolicBP,
+
+            oxygenSaturation:
+              parseNumber(
+                screening?.oxygenSaturation,
+              ),
+          }
+        : undefined,
+
+    rppg: rppg
+      ? {
+          trustScore:
+            rppg.trustScore,
+
+          confidence:
+            rppg.confidence,
+
+          heartRate:
+            rppg.heartRate,
+
+          heartRateVariability:
+            rppg.heartRateVariability,
+
+          respiratoryRate:
+            rppg.respiratoryRate,
+
+          systolicBP:
+            rppg.systolicBP,
+
+          diastolicBP:
+            rppg.diastolicBP,
+
+          measurementAvailable:
+            typeof rppg.trustScore ===
+            'number',
+        }
+      : undefined,
+  }
+
+  /*
+   * ==========================================
+   * RUN TRIAGE ENGINE
+   * ==========================================
+   */
+
+  const triageResult =
+    runTriage(triageInput)
+
+  const category =
+    triageResult.category
+
+  /*
+   * ==========================================
+   * CATEGORY CONTENT
+   * ==========================================
+   */
 
   const categoryContent = {
     routine: {
-      title: t('triage', 'routineTitle'),
-      description: t('triage', 'routineDescription'),
-      action: t('triage', 'routineAction'),
+      title: t(
+        'triage',
+        'routineTitle',
+      ),
+
+      description: t(
+        'triage',
+        'routineDescription',
+      ),
+
+      action: t(
+        'triage',
+        'routineAction',
+      ),
     },
 
     consult: {
-      title: t('triage', 'consultTitle'),
-      description: t('triage', 'consultDescription'),
-      action: t('triage', 'consultAction'),
+      title: t(
+        'triage',
+        'consultTitle',
+      ),
+
+      description: t(
+        'triage',
+        'consultDescription',
+      ),
+
+      action: t(
+        'triage',
+        'consultAction',
+      ),
     },
 
     urgent: {
-      title: t('triage', 'urgentTitle'),
-      description: t('triage', 'urgentDescription'),
-      action: t('triage', 'urgentAction'),
+      title: t(
+        'triage',
+        'urgentTitle',
+      ),
+
+      description: t(
+        'triage',
+        'urgentDescription',
+      ),
+
+      action: t(
+        'triage',
+        'urgentAction',
+      ),
     },
   }
 
-  const result = categoryContent[category]
+  const result =
+    categoryContent[category]
+
+  /*
+   * ==========================================
+   * NAVIGATION
+   * ==========================================
+   */
 
   const handleBack = () => {
-    navigate('/screening/trustscore', {
-      state: {
-        patient,
-        screening,
+    navigate(
+      '/screening/trustscore',
+      {
+        state: {
+          patient,
+          screening,
+        },
       },
-    })
+    )
   }
 
   const handleContinue = () => {
-    /*
-     * Next workflow step will be consultation/referral.
-     * For now we keep the data available for the next screen.
-     */
-    navigate('/referral', {
-      state: {
-        patient,
-        screening,
-        rppg,
-        triage: {
-          category,
-          demoMode: true,
+    navigate(
+      '/referral',
+      {
+        state: {
+          patient,
+          screening,
+          rppg,
+
+          triage: {
+            category,
+
+            reasons:
+              triageResult.reasons,
+
+            measurementAction:
+              triageResult.measurementAction,
+
+            requiresProfessionalReview:
+              triageResult.requiresProfessionalReview,
+
+            demoMode: true,
+          },
         },
       },
-    })
+    )
   }
+
+  /*
+   * ==========================================
+   * UI
+   * ==========================================
+   */
 
   return (
     <div className="page-shell">
@@ -153,25 +327,40 @@ function Triage() {
             onClick={handleBack}
           >
             <ArrowLeft size={18} />
-            {t('common', 'back')}
+
+            {t(
+              'common',
+              'back',
+            )}
           </button>
 
           <div className="form-heading">
             <div className="form-icon">
-              <ClipboardCheck size={24} />
+              <ClipboardCheck
+                size={24}
+              />
             </div>
 
             <div>
               <p className="eyebrow">
-                {t('triage', 'eyebrow')}
+                {t(
+                  'triage',
+                  'eyebrow',
+                )}
               </p>
 
               <h1>
-                {t('triage', 'title')}
+                {t(
+                  'triage',
+                  'title',
+                )}
               </h1>
 
               <p>
-                {t('triage', 'description')}
+                {t(
+                  'triage',
+                  'description',
+                )}
               </p>
             </div>
           </div>
@@ -184,8 +373,12 @@ function Triage() {
         <div className="workflow">
           <div className="workflow-step completed">
             <span>✓</span>
+
             <label>
-              {t('screening', 'registration')}
+              {t(
+                'screening',
+                'registration',
+              )}
             </label>
           </div>
 
@@ -193,8 +386,12 @@ function Triage() {
 
           <div className="workflow-step completed">
             <span>✓</span>
+
             <label>
-              {t('screening', 'symptomsStep')}
+              {t(
+                'screening',
+                'symptomsStep',
+              )}
             </label>
           </div>
 
@@ -202,8 +399,12 @@ function Triage() {
 
           <div className="workflow-step completed">
             <span>✓</span>
+
             <label>
-              {t('screening', 'rppg')}
+              {t(
+                'screening',
+                'rppg',
+              )}
             </label>
           </div>
 
@@ -211,8 +412,12 @@ function Triage() {
 
           <div className="workflow-step active">
             <span>4</span>
+
             <label>
-              {t('screening', 'triage')}
+              {t(
+                'screening',
+                'triage',
+              )}
             </label>
           </div>
         </div>
@@ -225,15 +430,23 @@ function Triage() {
           <div className="patient-strip">
             <div>
               <span>
-                {t('screening', 'screeningFor')}
+                {t(
+                  'screening',
+                  'screeningFor',
+                )}
               </span>
 
-              <strong>{patient.name}</strong>
+              <strong>
+                {patient.name}
+              </strong>
             </div>
 
             <div>
               <span>
-                {t('screening', 'age')}
+                {t(
+                  'screening',
+                  'age',
+                )}
               </span>
 
               <strong>
@@ -243,7 +456,10 @@ function Triage() {
 
             <div>
               <span>
-                {t('screening', 'village')}
+                {t(
+                  'screening',
+                  'village',
+                )}
               </span>
 
               <strong>
@@ -261,19 +477,30 @@ function Triage() {
           className={`triage-result-card ${category}`}
         >
           <div className="triage-result-top">
+
             <div className="triage-result-icon">
               {category === 'urgent' ? (
-                <AlertTriangle size={30} />
-              ) : category === 'consult' ? (
-                <Stethoscope size={30} />
+                <AlertTriangle
+                  size={30}
+                />
+              ) : category ===
+                'consult' ? (
+                <Stethoscope
+                  size={30}
+                />
               ) : (
-                <CheckCircle2 size={30} />
+                <CheckCircle2
+                  size={30}
+                />
               )}
             </div>
 
             <div>
               <p className="section-kicker">
-                {t('triage', 'recommendation')}
+                {t(
+                  'triage',
+                  'recommendation',
+                )}
               </p>
 
               <h2>
@@ -288,7 +515,10 @@ function Triage() {
 
           <div className="triage-action">
             <strong>
-              {t('triage', 'nextStep')}
+              {t(
+                'triage',
+                'nextStep',
+              )}
             </strong>
 
             <span>
@@ -298,25 +528,69 @@ function Triage() {
         </section>
 
         {/* =========================
+            TRIAGE REASONS
+           ========================= */}
+
+        <section className="triage-summary-card">
+          <div className="summary-card-header">
+            <ClipboardCheck
+              size={19}
+            />
+
+            <h3>
+              {t(
+                'triage',
+                'recommendation',
+              )}
+            </h3>
+          </div>
+
+          <div className="triage-reasons">
+            {triageResult.reasons.map(
+              (reason, index) => (
+                <div
+                  key={`${reason}-${index}`}
+                  className="triage-reason"
+                >
+                  <span>
+                    {reason}
+                  </span>
+                </div>
+              ),
+            )}
+          </div>
+        </section>
+
+        {/* =========================
             INPUT SUMMARY
            ========================= */}
 
         <section className="triage-summary-grid">
 
+          {/* Symptoms */}
+
           <div className="triage-summary-card">
             <div className="summary-card-header">
-              <ClipboardCheck size={19} />
+              <ClipboardCheck
+                size={19}
+              />
 
               <h3>
-                {t('triage', 'symptomSummary')}
+                {t(
+                  'triage',
+                  'symptomSummary',
+                )}
               </h3>
             </div>
 
-            {screening?.symptoms?.length ? (
+            {screening?.symptoms
+              ?.length ? (
               <div className="summary-tags">
                 {screening.symptoms.map(
                   (symptom) => (
-                    <span key={symptom}>
+                    <span
+                      key={symptom}
+                    >
                       {symptom}
                     </span>
                   ),
@@ -324,23 +598,34 @@ function Triage() {
               </div>
             ) : (
               <p className="empty-summary">
-                {t('triage', 'noSymptoms')}
+                {t(
+                  'triage',
+                  'noSymptoms',
+                )}
               </p>
             )}
           </div>
 
+          {/* TrustScore */}
+
           <div className="triage-summary-card">
             <div className="summary-card-header">
-              <ShieldCheck size={19} />
+              <ShieldCheck
+                size={19}
+              />
 
               <h3>
-                {t('triage', 'screeningConfidence')}
+                {t(
+                  'triage',
+                  'screeningConfidence',
+                )}
               </h3>
             </div>
 
             <div className="confidence-summary">
               <strong>
-                {rppg?.trustScore ?? '—'}
+                {rppg?.trustScore ??
+                  '—'}
               </strong>
 
               <span>
@@ -349,7 +634,8 @@ function Triage() {
             </div>
 
             <p>
-              {rppg?.confidence === 'high'
+              {rppg?.confidence ===
+              'high'
                 ? t(
                     'triage',
                     'highConfidence',
@@ -363,22 +649,89 @@ function Triage() {
         </section>
 
         {/* =========================
+            MEASUREMENT ACTION
+           ========================= */}
+
+        {triageResult.measurementAction !==
+          'none' && (
+          <section className="triage-safety">
+            <AlertTriangle
+              size={19}
+            />
+
+            <div>
+              <strong>
+                {t(
+                  'trustScore',
+                  'retake',
+                )}
+              </strong>
+
+              <p>
+                {t(
+                  'trustScore',
+                  'retakeDescription',
+                )}
+              </p>
+            </div>
+          </section>
+        )}
+
+        {/* =========================
+            PROFESSIONAL REVIEW
+           ========================= */}
+
+        {triageResult.requiresProfessionalReview && (
+          <section className="triage-safety">
+            <Stethoscope
+              size={19}
+            />
+
+            <div>
+              <strong>
+                {t(
+                  'triage',
+                  'decisionSupport',
+                )}
+              </strong>
+
+              <p>
+                {t(
+                  'triage',
+                  'decisionSupportText',
+                )}
+              </p>
+            </div>
+          </section>
+        )}
+
+        {/* =========================
             SAFETY
            ========================= */}
 
-        <section className="triage-safety">
-          <Info size={19} />
+        {!triageResult.requiresProfessionalReview &&
+          triageResult.measurementAction ===
+            'none' && (
+          <section className="triage-safety">
+            <Info size={19} />
 
-          <div>
-            <strong>
-              {t('triage', 'decisionSupport')}
-            </strong>
+            <div>
+              <strong>
+                {t(
+                  'triage',
+                  'decisionSupport',
+                )}
+              </strong>
 
-            <p>
-              {t('triage', 'decisionSupportText')}
-            </p>
-          </div>
-        </section>
+              <p>
+                {t(
+                  'triage',
+                  'decisionSupportText',
+                )}
+              </p>
+            </div>
+          </section>
+        )}
 
         {/* =========================
             FOOTER
@@ -386,7 +739,10 @@ function Triage() {
 
         <div className="form-footer triage-footer">
           <p>
-            {t('triage', 'footerNote')}
+            {t(
+              'triage',
+              'footerNote',
+            )}
           </p>
 
           <button
@@ -395,17 +751,25 @@ function Triage() {
             onClick={handleContinue}
           >
             {result.action}
-            <ArrowRight size={18} />
+
+            <ArrowRight
+              size={18}
+            />
           </button>
         </div>
 
-        {/* Prototype marker */}
+        {/* =========================
+            PROTOTYPE MARKER
+           ========================= */}
 
         <div className="prototype-note">
           <Info size={16} />
 
           <span>
-            {t('triage', 'prototypeNote')}
+            {t(
+              'triage',
+              'prototypeNote',
+            )}
           </span>
         </div>
 
