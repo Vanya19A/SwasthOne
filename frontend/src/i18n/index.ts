@@ -551,31 +551,46 @@ const translations = {
       offlineDescription:
         'Data will be saved locally and synced when connectivity returns.',
     },
-    //     registration: {
-    //   eyebrow: 'Patient registration',
-    //   title: 'Create a patient profile',
-    //   description:
-    //     'Enter the basic details needed to create the patient record.',
+        registration: {
+      eyebrow: 'Patient registration',
+      title: 'Create a patient profile',
+      description:
+        'Enter the basic details needed to create the patient record.',
 
-    //   fullName: 'Full name',
-    //   age: 'Age',
-    //   gender: 'Gender',
-    //   phone: 'Phone number',
-    //   village: 'Village',
-    //   emergencyContact: 'Emergency contact',
+      fullName: 'Full name',
+      age: 'Age',
+      gender: 'Gender',
+      phone: 'Phone number',
+      village: 'Village',
+      emergencyContact: 'Emergency contact',
 
-    //   selectGender: 'Select gender',
-    //   male: 'Male',
-    //   female: 'Female',
-    //   other: 'Other',
+      patientWorkflow: 'Patient workflow',
+      basicInformation: 'Basic information',
+      basicInformationDescription:
+        "Enter the patient's basic identifying details.",
+      contactLocation: 'Contact & location',
+      contactLocationDescription:
+        'Useful for continuity and follow-up.',
+      backToDashboard: 'Back to dashboard',
+      cancel: 'Cancel',
+      preferNotToSay: 'Prefer not to say',
+      fullNamePlaceholder: "Enter patient's full name",
+      agePlaceholder: 'e.g. 42',
+      phonePlaceholder: '10-digit mobile number',
+      villagePlaceholder: 'Enter village or locality',
+      emergencyPlaceholder: 'Emergency contact number',
+      selectGender: 'Select gender',
+      male: 'Male',
+      female: 'Female',
+      other: 'Other',
 
-    //   consentTitle: 'Patient consent',
-    //   consentText:
-    //     'I consent to my health information being recorded and used for screening and care coordination.',
+      consentTitle: 'Patient consent',
+      consentText:
+        'I consent to my health information being recorded and used for screening and care coordination.',
 
-    //   continue: 'Continue',
-    //   required: 'This field is required',
-    // },
+      continue: 'Continue',
+      required: 'This field is required',
+    },
 
     // profile: {
     //   eyebrow: 'Patient profile',
@@ -752,25 +767,7 @@ const translations = {
       prototypeNote:
         'Prototype status is simulated. Production status updates will come from authorized backend and facility workflows.',
     },
-    registration: {
-      patientWorkflow: 'Patient workflow',
-      basicInformation: 'Basic information',
-      basicInformationDescription:
-        "Enter the patient's basic identifying details.",
-      contactLocation: 'Contact & location',
-      contactLocationDescription:
-        'Useful for continuity and follow-up.',
-      backToDashboard: 'Back to dashboard',
-      cancel: 'Cancel',
-      preferNotToSay: 'Prefer not to say',
-      fullNamePlaceholder: "Enter patient's full name",
-      agePlaceholder: 'e.g. 42',
-      phonePlaceholder: '10-digit mobile number',
-      villagePlaceholder: 'Enter village or locality',
-      emergencyPlaceholder: 'Emergency contact number',
-      consentText:
-        'I confirm that the patient has provided consent for registration and healthcare screening.',
-    },
+
     profile: {
       notFound: 'Patient not found',
       registerFirst: 'Please register a patient first.',
@@ -1196,31 +1193,46 @@ const translations = {
       offlineDescription:
         'डेटा स्थानीय रूप से सहेजा जाएगा और कनेक्टिविटी लौटने पर सिंक किया जाएगा।',
     },
-    //     registration: {
-    //   eyebrow: 'रोगी पंजीकरण',
-    //   title: 'रोगी प्रोफ़ाइल बनाएं',
-    //   description:
-    //     'रोगी रिकॉर्ड बनाने के लिए आवश्यक मूल जानकारी दर्ज करें।',
+    registration: {
+      eyebrow: 'रोगी पंजीकरण',
+      title: 'रोगी प्रोफ़ाइल बनाएं',
+      description:
+        'रोगी रिकॉर्ड बनाने के लिए आवश्यक मूल जानकारी दर्ज करें।',
 
-    //   fullName: 'पूरा नाम',
-    //   age: 'उम्र',
-    //   gender: 'लिंग',
-    //   phone: 'फ़ोन नंबर',
-    //   village: 'गाँव',
-    //   emergencyContact: 'आपातकालीन संपर्क',
+      fullName: 'पूरा नाम',
+      age: 'उम्र',
+      gender: 'लिंग',
+      phone: 'फ़ोन नंबर',
+      village: 'गाँव',
+      emergencyContact: 'आपातकालीन संपर्क',
 
-    //   selectGender: 'लिंग चुनें',
-    //   male: 'पुरुष',
-    //   female: 'महिला',
-    //   other: 'अन्य',
+      selectGender: 'लिंग चुनें',
+      male: 'पुरुष',
+      female: 'महिला',
+      other: 'अन्य',
 
-    //   consentTitle: 'रोगी की सहमति',
-    //   consentText:
-    //     'मैं अपनी स्वास्थ्य जानकारी को दर्ज करने और जाँच तथा देखभाल के समन्वय के लिए उपयोग करने की सहमति देता/देती हूँ।',
+      patientWorkflow: 'रोगी कार्यप्रवाह',
+      basicInformation: 'मूल जानकारी',
+      basicInformationDescription:
+        'रोगी की मूल पहचान संबंधी जानकारी दर्ज करें।',
+      contactLocation: 'संपर्क और स्थान',
+      contactLocationDescription:
+        'देखभाल की निरंतरता और फॉलो-अप के लिए उपयोगी।',
+      backToDashboard: 'डैशबोर्ड पर वापस जाएँ',
+      cancel: 'रद्द करें',
+      preferNotToSay: 'बताना नहीं चाहते',
+      fullNamePlaceholder: 'रोगी का पूरा नाम दर्ज करें',
+      agePlaceholder: 'उदा. 42',
+      phonePlaceholder: '10 अंकों का मोबाइल नंबर',
+      villagePlaceholder: 'गाँव या स्थान दर्ज करें',
+      emergencyPlaceholder: 'आपातकालीन संपर्क नंबर',
+      consentTitle: 'रोगी की सहमति',
+      consentText:
+        'मैं अपनी स्वास्थ्य जानकारी को दर्ज करने और जाँच तथा देखभाल के समन्वय के लिए उपयोग करने की सहमति देता/देती हूँ।',
 
-    //   continue: 'जारी रखें',
-    //   required: 'यह फ़ील्ड आवश्यक है',
-    // },
+      continue: 'जारी रखें',
+      required: 'यह फ़ील्ड आवश्यक है',
+    },
 
     // profile: {
     //   eyebrow: 'रोगी प्रोफ़ाइल',
@@ -1453,25 +1465,7 @@ const translations = {
       prototypeNote:
         'प्रोटोटाइप स्थिति सिम्युलेटेड है। वास्तविक स्थिति अधिकृत बैकएंड और स्वास्थ्य सुविधा प्रक्रियाओं से अपडेट होगी।',
     },
-    registration: {
-      patientWorkflow: 'रोगी कार्यप्रवाह',
-        basicInformation: 'मूल जानकारी',
-        basicInformationDescription:
-          'रोगी की मूल पहचान संबंधी जानकारी दर्ज करें।',
-        contactLocation: 'संपर्क और स्थान',
-        contactLocationDescription:
-          'देखभाल की निरंतरता और फॉलो-अप के लिए उपयोगी।',
-        backToDashboard: 'डैशबोर्ड पर वापस जाएँ',
-        cancel: 'रद्द करें',
-        preferNotToSay: 'बताना नहीं चाहते',
-        fullNamePlaceholder: 'रोगी का पूरा नाम दर्ज करें',
-        agePlaceholder: 'उदा. 42',
-        phonePlaceholder: '10 अंकों का मोबाइल नंबर',
-        villagePlaceholder: 'गाँव या स्थान दर्ज करें',
-        emergencyPlaceholder: 'आपातकालीन संपर्क नंबर',
-        consentText:
-          'मैं पुष्टि करता/करती हूँ कि रोगी ने पंजीकरण और स्वास्थ्य जाँच के लिए सहमति दी है।',
-    },
+
     profile: {
       notFound: 'रोगी नहीं मिला',
       registerFirst: 'कृपया पहले किसी रोगी का पंजीकरण करें।',
@@ -1899,31 +1893,46 @@ const translations = {
       offlineDescription:
         'डेटा स्थानिक पातळीवर जतन केला जाईल आणि कनेक्टिव्हिटी परत आल्यावर सिंक केला जाईल.',
     },
-    //     registration: {
-    //   eyebrow: 'रुग्ण नोंदणी',
-    //   title: 'रुग्ण प्रोफाइल तयार करा',
-    //   description:
-    //     'रुग्णाची नोंद तयार करण्यासाठी आवश्यक मूलभूत माहिती भरा.',
+    registration: {
+      eyebrow: 'रुग्ण नोंदणी',
+      title: 'रुग्ण प्रोफाइल तयार करा',
+      description:
+        'रुग्णाची नोंद तयार करण्यासाठी आवश्यक मूलभूत माहिती भरा.',
 
-    //   fullName: 'पूर्ण नाव',
-    //   age: 'वय',
-    //   gender: 'लिंग',
-    //   phone: 'फोन नंबर',
-    //   village: 'गाव',
-    //   emergencyContact: 'आपत्कालीन संपर्क',
+      fullName: 'पूर्ण नाव',
+      age: 'वय',
+      gender: 'लिंग',
+      phone: 'फोन नंबर',
+      village: 'गाव',
+      emergencyContact: 'आपत्कालीन संपर्क',
 
-    //   selectGender: 'लिंग निवडा',
-    //   male: 'पुरुष',
-    //   female: 'महिला',
-    //   other: 'इतर',
+      selectGender: 'लिंग निवडा',
+      male: 'पुरुष',
+      female: 'महिला',
+      other: 'इतर',
 
-    //   consentTitle: 'रुग्णाची संमती',
-    //   consentText:
-    //     'माझी आरोग्यविषयक माहिती नोंदवण्यासाठी आणि तपासणी व आरोग्यसेवेच्या समन्वयासाठी वापरण्यास मी संमती देतो/देते.',
+      patientWorkflow: 'रुग्ण कार्यप्रवाह',
+      basicInformation: 'मूलभूत माहिती',
+      basicInformationDescription:
+        'रुग्णाची मूलभूत ओळख संबंधित माहिती भरा.',
+      contactLocation: 'संपर्क आणि ठिकाण',
+      contactLocationDescription:
+        'आरोग्यसेवेची सातत्यता आणि फॉलो-अपसाठी उपयुक्त.',
+      backToDashboard: 'डॅशबोर्डवर परत जा',
+      cancel: 'रद्द करा',
+      preferNotToSay: 'सांगू इच्छित नाही',
+      fullNamePlaceholder: 'रुग्णाचे पूर्ण नाव भरा',
+      agePlaceholder: 'उदा. 42',
+      phonePlaceholder: '10 अंकी मोबाइल नंबर',
+      villagePlaceholder: 'गाव किंवा ठिकाण भरा',
+      emergencyPlaceholder: 'आपत्कालीन संपर्क क्रमांक',
+      consentTitle: 'रुग्णाची संमती',
+      consentText:
+        'माझी आरोग्यविषयक माहिती नोंदवण्यासाठी आणि तपासणी व आरोग्यसेवेच्या समन्वयासाठी वापरण्यास मी संमती देतो/देते.',
 
-    //   continue: 'पुढे जा',
-    //   required: 'हे क्षेत्र आवश्यक आहे',
-    // },
+      continue: 'पुढे जा',
+      required: 'हे क्षेत्र आवश्यक आहे',
+    },
 
     // profile: {
     //   eyebrow: 'रुग्ण प्रोफाइल',
@@ -2156,25 +2165,7 @@ const translations = {
       prototypeNote:
         'प्रोटोटाइप स्थिती सिम्युलेटेड आहे. उत्पादन प्रणालीमध्ये स्थिती अधिकृत बॅकएंड आणि आरोग्य सुविधा प्रक्रियेतून अपडेट केली जाईल.',
     },
-    registration: {
-      patientWorkflow: 'रुग्ण कार्यप्रवाह',
-        basicInformation: 'मूलभूत माहिती',
-        basicInformationDescription:
-          'रुग्णाची मूलभूत ओळख संबंधित माहिती भरा.',
-        contactLocation: 'संपर्क आणि ठिकाण',
-        contactLocationDescription:
-          'आरोग्यसेवेची सातत्यता आणि फॉलो-अपसाठी उपयुक्त.',
-        backToDashboard: 'डॅशबोर्डवर परत जा',
-        cancel: 'रद्द करा',
-        preferNotToSay: 'सांगू इच्छित नाही',
-        fullNamePlaceholder: 'रुग्णाचे पूर्ण नाव भरा',
-        agePlaceholder: 'उदा. 42',
-        phonePlaceholder: '10 अंकी मोबाइल नंबर',
-        villagePlaceholder: 'गाव किंवा ठिकाण भरा',
-        emergencyPlaceholder: 'आपत्कालीन संपर्क क्रमांक',
-        consentText:
-          'रुग्णाने नोंदणी आणि आरोग्य तपासणीसाठी संमती दिली आहे याची मी पुष्टी करतो/करते.',
-    },
+
     profile: {
       notFound: 'रुग्ण सापडला नाही',
       registerFirst: 'कृपया प्रथम रुग्णाची नोंदणी करा.',
