@@ -1,6 +1,6 @@
 # SwasthOne
 
-### AI-Assisted Rural Healthcare Access, Screening & Continuity Platform
+### A Rural Healthcare Access, Screening & Continuity Platform
 
 SwasthOne is an integrated rural healthcare platform connecting patients, ASHA/ANM frontline workers, doctors, and healthcare facilities across the complete care journey.
 
