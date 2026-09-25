@@ -1,32 +1,29 @@
-import {
-  Activity,
-  ClipboardList,
-  Home,
-  Users,
-} from 'lucide-react'
+import { Activity, ClipboardList, FileHeart, Home, Users } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { getStoredUser } from '../services/api'
 
 function BottomNav() {
+  const navigate = useNavigate()
+  const user = getStoredUser()
+  const role = user?.role === 'health_worker' ? 'asha' : (user?.role || 'patient')
+  const home = role === 'admin' ? '/admin' : `/${role}`
+
+  const items = [
+    { label: 'Home', icon: Home, path: home },
+    { label: 'Patients', icon: Users, path: '/patients' },
+    { label: 'Screen', icon: Activity, path: '/patients' },
+    { label: 'Referrals', icon: ClipboardList, path: '/referral/tracking' },
+    { label: 'Records', icon: FileHeart, path: '/patients' },
+  ]
+
   return (
     <nav className="bottom-nav">
-      <button className="bottom-nav-item active" type="button">
-        <Home size={20} />
-        <span>Home</span>
-      </button>
-
-      <button className="bottom-nav-item" type="button">
-        <Users size={20} />
-        <span>Patients</span>
-      </button>
-
-      <button className="bottom-nav-item" type="button">
-        <Activity size={20} />
-        <span>Screen</span>
-      </button>
-
-      <button className="bottom-nav-item" type="button">
-        <ClipboardList size={20} />
-        <span>Referrals</span>
-      </button>
+      {items.map(({ label, icon: Icon, path }, index) => (
+        <button key={label} className={`bottom-nav-item ${index === 0 ? 'active' : ''}`} type="button" onClick={() => navigate(path)}>
+          <Icon size={20} />
+          <span>{label}</span>
+        </button>
+      ))}
     </nav>
   )
 }

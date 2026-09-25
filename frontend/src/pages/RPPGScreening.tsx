@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { t, useLanguage } from '../i18n'
+import { apiFetch } from '../services/api'
 
 interface Patient {
   name: string
@@ -22,6 +23,8 @@ interface Patient {
 }
 
 interface ScreeningData {
+  _id?: string
+  patientId?: string
   symptoms: string[]
   duration: string
   severity: string
@@ -30,6 +33,25 @@ interface ScreeningData {
   pulse: string
   temperature: string
   oxygenSaturation: string
+}
+
+interface V2Result {
+  heartRate: number | null
+  trustScore: number
+  signalQuality: number
+  temporalStability: number
+  algorithmAgreement: number
+  regionAgreement: number
+  motionStability: number
+  lighting: number
+  confidence: 'high' | 'medium' | 'low'
+  accept: boolean
+  windowHrs: number[]
+  globalClusters: { hr: number; score: number; windows: number }[]
+  methods: { method: string; heartRate: number | null }[]
+  frames: number
+  samplingRate: number
+  demoMode: boolean
 }
 
 function RPPGScreening() {
@@ -45,6 +67,11 @@ function RPPGScreening() {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const timerRef = useRef<number | null>(null)
+  const recorderRef = useRef<MediaRecorder | null>(null)
+  const recordingChunksRef = useRef<Blob[]>([])
+  const [analysis, setAnalysis] = useState<V2Result | null>(null)
+  const [analysisReady, setAnalysisReady] = useState(false)
+  const [analyzing, setAnalyzing] = useState(false)
 
   const [cameraStatus, setCameraStatus] = useState<
     'idle' | 'requesting' | 'ready' | 'denied' | 'error'
@@ -54,6 +81,8 @@ function RPPGScreening() {
   const [secondsRemaining, setSecondsRemaining] = useState(30)
   const [measurementComplete, setMeasurementComplete] =
     useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (
@@ -74,7 +103,6 @@ function RPPGScreening() {
       if (timerRef.current) {
         window.clearInterval(timerRef.current)
       }
-
       if (streamRef.current) {
         streamRef.current
           .getTracks()
@@ -106,33 +134,124 @@ function RPPGScreening() {
     }
   }
 
+  const getRecordingMimeType = () => {
+    const candidates = [
+      'video/webm;codecs=vp9',
+      'video/webm;codecs=vp8',
+      'video/webm',
+    ]
+    return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? ''
+  }
+
+  const analyzeRecording = async (blob: Blob) => {
+    setAnalyzing(true)
+    setError('')
+
+    try {
+      const formData = new FormData()
+      formData.append('video', blob, 'swasthone-rppg-v2.webm')
+
+      const serviceUrl =
+        import.meta.env.VITE_RPPG_API_URL || 'http://localhost:8000'
+
+      const response = await fetch(`${serviceUrl}/analyze`, {
+        method: 'POST',
+        body: formData,
+      })
+
+      const payload = await response.json().catch(() => ({}))
+
+      if (!response.ok || !payload.success) {
+        throw new Error(
+          payload.message ||
+            'The V2 rPPG service could not process the recording.',
+        )
+      }
+
+      setAnalysis(payload.result as V2Result)
+      setAnalysisReady(
+        Boolean(payload.result?.heartRate !== null && payload.result?.accept),
+      )
+    } catch (error) {
+      console.error('V2 rPPG analysis error:', error)
+      setAnalysisReady(false)
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to analyse the rPPG recording.',
+      )
+    } finally {
+      setAnalyzing(false)
+    }
+  }
+
   const startMeasurement = () => {
-    if (
-      cameraStatus !== 'ready' ||
-      isMeasuring
-    ) {
+    if (cameraStatus !== 'ready' || isMeasuring || analyzing) return
+
+    const stream = streamRef.current
+    if (!stream) return
+
+    const mimeType = getRecordingMimeType()
+    if (!mimeType) {
+      setError('This browser does not support the required camera recording format.')
       return
     }
 
-    setIsMeasuring(true)
-    setMeasurementComplete(false)
-    setSecondsRemaining(30)
+    try {
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 2_500_000,
+      })
 
-    let remaining = 30
+      recordingChunksRef.current = []
+      recorderRef.current = recorder
 
-    timerRef.current = window.setInterval(() => {
-      remaining -= 1
-      setSecondsRemaining(remaining)
-
-      if (remaining <= 0) {
-        if (timerRef.current) {
-          window.clearInterval(timerRef.current)
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordingChunksRef.current.push(event.data)
         }
-
-        setIsMeasuring(false)
-        setMeasurementComplete(true)
       }
-    }, 1000)
+
+      recorder.onstop = () => {
+        const blob = new Blob(recordingChunksRef.current, { type: mimeType })
+        recordingChunksRef.current = []
+        recorderRef.current = null
+        void analyzeRecording(blob)
+      }
+
+      setAnalysis(null)
+      setAnalysisReady(false)
+      setError('')
+      setIsMeasuring(true)
+      setMeasurementComplete(false)
+      setSecondsRemaining(30)
+
+      recorder.start(1000)
+
+      let remaining = 30
+      timerRef.current = window.setInterval(() => {
+        remaining -= 1
+        setSecondsRemaining(remaining)
+
+        if (remaining <= 0) {
+          if (timerRef.current) window.clearInterval(timerRef.current)
+          timerRef.current = null
+          setIsMeasuring(false)
+          setMeasurementComplete(true)
+
+          if (recorder.state !== 'inactive') {
+            recorder.stop()
+          }
+        }
+      }, 1000)
+    } catch (error) {
+      console.error('Unable to start rPPG recording:', error)
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to start the camera recording.',
+      )
+    }
   }
 
   const handleBack = () => {
@@ -143,21 +262,62 @@ function RPPGScreening() {
     })
   }
 
-  const handleContinue = () => {
-    navigate('/screening/trustscore', {
-      state: {
-        patient,
-        screening,
-        measurement: {
-          captured: true,
-          demoMode: true,
-        },
-      },
-    })
+  const handleContinue = async () => {
+    if (!screening) {
+      setError('Screening data is missing. Please go back and repeat the screening.')
+      return
+    }
+
+    if (!analysis || !analysisReady || analysis.heartRate === null || !analysis.accept) {
+      setError('The V2 camera signal did not meet the required quality checks. Please retake the measurement.')
+      return
+    }
+
+    setSaving(true)
+    setError('')
+
+    const rppgResult = {
+      heartRate: analysis.heartRate,
+      motion: analysis.motionStability,
+      trustScore: analysis.trustScore,
+      confidence: analysis.confidence,
+      algorithmAgreement: analysis.algorithmAgreement,
+      signalQuality: analysis.signalQuality,
+      lighting: analysis.lighting,
+      methods: analysis.methods.map((method) => ({
+        method: method.method,
+        ...(method.heartRate !== null ? { heartRate: method.heartRate } : {}),
+      })),
+      temporalStability: analysis.temporalStability,
+      regionAgreement: analysis.regionAgreement,
+      accept: analysis.accept,
+      windowHrs: analysis.windowHrs,
+      globalClusters: analysis.globalClusters,
+      demoMode: false,
+    }
+
+    const trustScoreState = { patient, screening, rppg: rppgResult }
+
+    setSaving(false)
+    navigate('/screening/trustscore', { state: trustScoreState })
+
+    if (!screening._id || !navigator.onLine) return
+
+    try {
+      await apiFetch('/rppg', {
+        method: 'POST',
+        body: JSON.stringify({
+          screeningId: screening._id,
+          hr: rppgResult.heartRate,
+          ...rppgResult,
+        }),
+      })
+    } catch (err) {
+      console.warn('Unable to persist rPPG result in background:', err)
+    }
   }
 
-  const progress =
-    ((30 - secondsRemaining) / 30) * 100
+  const progress = ((30 - secondsRemaining) / 30) * 100
 
   return (
     <div className="page-shell">
@@ -266,6 +426,8 @@ function RPPGScreening() {
             </div>
           </div>
         )}
+
+        {error && <p role="alert" className="form-error">{error}</p>}
 
         <div className="rppg-layout">
           {/* Camera */}
@@ -420,20 +582,36 @@ function RPPGScreening() {
               )}
             </div>
 
+
+            {isMeasuring && (
+              <div className="rppg-live-metrics">
+                <div><span>V2 capture</span><strong>{secondsRemaining}s</strong></div>
+                <div><span>Processing</span><strong>7-method</strong></div>
+                <div><span>Camera</span><strong>30 FPS target</strong></div>
+              </div>
+            )}
+
+            {analyzing && (
+              <div className="rppg-live-metrics">
+                <div><span>V2 engine</span><strong>Processing…</strong></div>
+                <div><span>Face tracking</span><strong>Running</strong></div>
+                <div><span>Consensus</span><strong>Calculating</strong></div>
+              </div>
+            )}
+
             {cameraStatus === 'ready' &&
               !isMeasuring &&
-              !measurementComplete && (
+              !analyzing &&
+              (!measurementComplete || !analysis?.accept) && (
                 <button
                   className="primary-button rppg-start-button"
                   type="button"
                   onClick={startMeasurement}
                 >
                   <Camera size={18} />
-
-                  {t(
-                    'rppg',
-                    'start',
-                  )}
+                  {analysis && !analysis.accept
+                    ? 'Retake measurement'
+                    : t('rppg', 'start')}
                 </button>
               )}
 
@@ -471,15 +649,99 @@ function RPPGScreening() {
                   </strong>
 
                   <span>
-                    {t(
-                      'rppg',
-                      'qualityAnalysisNext',
-                    )}
+                    {analyzing
+                      ? 'Running the exact V2 analysis…'
+                      : analysis
+                        ? 'V2 analysis complete. Review the measurement quality.'
+                        : 'Recording captured. Starting V2 analysis…'}
                   </span>
                 </div>
               </div>
             )}
           </section>
+
+          {analysis && (
+            <section className="rppg-technical-card">
+              <div className="technical-header">
+                <div>
+                  <p className="section-kicker">Measurement details</p>
+                  <h2>Exact V2 rPPG result</h2>
+                </div>
+                <span className="technical-badge">
+                  7-method consensus
+                </span>
+              </div>
+
+              <div className="result-metrics">
+                <div className="result-metric">
+                  <div className="metric-icon"><Camera size={21} /></div>
+                  <div>
+                    <span>Heart rate</span>
+                    <strong>{analysis.heartRate ?? '—'}</strong>
+                    <small>bpm</small>
+                  </div>
+                </div>
+                <div className="result-metric">
+                  <div className="metric-icon"><ShieldCheck size={21} /></div>
+                  <div>
+                    <span>TrustScore</span>
+                    <strong>{analysis.trustScore}</strong>
+                    <small>/100</small>
+                  </div>
+                </div>
+                <div className="result-metric">
+                  <div className="metric-icon"><CheckCircle2 size={21} /></div>
+                  <div>
+                    <span>Decision</span>
+                    <strong>{analysis.accept ? 'ACCEPT' : 'RETAKE'}</strong>
+                    <small>V2</small>
+                  </div>
+                </div>
+              </div>
+
+              <div className="quality-grid">
+                <div className="quality-item"><div className="quality-indicator good" /><div><span>Signal quality</span><strong>{analysis.signalQuality}%</strong></div></div>
+                <div className="quality-item"><div className="quality-indicator good" /><div><span>Temporal stability</span><strong>{analysis.temporalStability}%</strong></div></div>
+                <div className="quality-item"><div className="quality-indicator good" /><div><span>Method agreement</span><strong>{analysis.algorithmAgreement}%</strong></div></div>
+                <div className="quality-item"><div className="quality-indicator good" /><div><span>Region agreement</span><strong>{analysis.regionAgreement}%</strong></div></div>
+                <div className="quality-item"><div className="quality-indicator good" /><div><span>Motion stability</span><strong>{analysis.motionStability}%</strong></div></div>
+                <div className="quality-item"><div className="quality-indicator good" /><div><span>Lighting stability</span><strong>{analysis.lighting}%</strong></div></div>
+              </div>
+
+              <div className="rppg-method-grid">
+                {analysis.methods.map((method) => (
+                  <div key={method.method} className="method-chip">
+                    <span>{method.method}</span>
+                    <strong>{method.heartRate ?? '—'} BPM</strong>
+                    <small>V2 evidence</small>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rppg-spectrum">
+                <div className="chart-label">Overlapping temporal windows</div>
+                <div className="window-hr-list">
+                  {analysis.windowHrs.length
+                    ? analysis.windowHrs.map((hr, index) => (
+                        <span key={`${hr}-${index}`}>W{index + 1}: <strong>{hr.toFixed(1)} BPM</strong></span>
+                      ))
+                    : <span>No valid V2 windows</span>}
+                </div>
+                <div className="spectrum-peak">
+                  Sampling: <strong>{analysis.samplingRate} FPS</strong>
+                  {' · '}
+                  Frames: <strong>{analysis.frames}</strong>
+                  {' · '}
+                  Confidence: <strong>{analysis.confidence}</strong>
+                </div>
+              </div>
+
+              <p className="technical-note">
+                These values expose the V2 measurement pipeline for engineering transparency. They are not diagnostic outputs.
+              </p>
+            </section>
+          )}
+
 
           {/* Instructions */}
           <aside className="rppg-info-column">
@@ -635,7 +897,7 @@ function RPPGScreening() {
           <button
             className="primary-button"
             type="button"
-            disabled={!measurementComplete}
+            disabled={!analysisReady || saving || analyzing}
             onClick={handleContinue}
           >
             {t(
@@ -647,18 +909,7 @@ function RPPGScreening() {
           </button>
         </div>
 
-        {measurementComplete && (
-          <div className="prototype-note">
-            <Info size={16} />
 
-            <span>
-              {t(
-                'rppg',
-                'prototypeNote',
-              )}
-            </span>
-          </div>
-        )}
       </main>
     </div>
   )

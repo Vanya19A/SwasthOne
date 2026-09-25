@@ -4,8 +4,8 @@ import { ArrowLeft, ArrowRight, Check, HeartPulse, Stethoscope } from 'lucide-re
 import { useLocation, useNavigate } from 'react-router-dom'
 import { saveOfflineRecord } from '../utils/offlineStorage'
 import { t, useLanguage } from '../i18n'
-import { getPatientRecord, savePatientRecord } from '../utils/patientRecordStorage'
 import type { PatientProfile } from '../types/patientRecord'
+import { apiFetch } from '../services/api'
 
 
 const symptomOptions = [
@@ -45,64 +45,36 @@ function Screening() {
     )
   }
 
-  const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
-
-    const screeningData = {
-  symptoms,
-  duration,
-  severity,
-  hasManualVitals,
-  bloodPressure,
-  pulse,
-  temperature,
-  oxygenSaturation,
-}
-
-if (patient?.patientId) {
-  const patientRecord = getPatientRecord(patient.patientId)
-
-  if (patientRecord) {
-    patientRecord.screenings.push({
-      screeningId: crypto.randomUUID(),
-      patientId: patient.patientId,
-      recordedAt: new Date().toISOString(),
-      symptoms,
-      duration: duration || undefined,
-      severity: severity || undefined,
-      manualVitals: hasManualVitals
-        ? {
-            bloodPressure: bloodPressure || undefined,
-            pulse: pulse
-              ? Number(pulse)
-              : undefined,
-            temperature: temperature
-              ? Number(temperature)
-              : undefined,
-            oxygenSaturation: oxygenSaturation
-              ? Number(oxygenSaturation)
-              : undefined,
-          }
-        : undefined,
-    })
-
-    savePatientRecord(patientRecord)
-  }
-}
-
-    if (!navigator.onLine) {
-      saveOfflineRecord('screening', {
-        patient,
-        screening: screeningData,
+    if (!patient?.patientId) { setError('Patient ID is missing.'); return }
+    setError('')
+    setLoading(true)
+    const [systolic, diastolic] = bloodPressure.split('/').map(Number)
+    const severityValue = severity === 'Mild' ? 2 : severity === 'Moderate' ? 5 : severity === 'Severe' ? 8 : undefined
+    const screeningData = { symptoms, duration, severity, hasManualVitals, bloodPressure, pulse, temperature, oxygenSaturation }
+    try {
+      if (!navigator.onLine) {
+        saveOfflineRecord('screening', { patient, screening: screeningData })
+        navigate('/screening/rppg', { state: { patient, screening: { ...screeningData, patientId: patient.patientId } } })
+        return
+      }
+      const response = await apiFetch<{ success: boolean; screening: { _id: string; patient: string; createdAt: string; symptoms: string[]; duration?: string; severity?: number; hasManualVitals: boolean; bloodPressure?: { systolic?: number; diastolic?: number }; oxygenSaturation?: number; heartRate?: number; temperature?: number; rppg?: unknown } }>('/screenings', {
+        method: 'POST',
+        body: JSON.stringify({
+          patientId: patient.patientId, symptoms, duration: duration || undefined, severity: severityValue, hasManualVitals,
+          bloodPressure: hasManualVitals && Number.isFinite(systolic) && Number.isFinite(diastolic) ? { systolic, diastolic } : undefined,
+          heartRate: pulse ? Number(pulse) : undefined, temperature: temperature ? Number(temperature) : undefined,
+          oxygenSaturation: oxygenSaturation ? Number(oxygenSaturation) : undefined,
+        }),
       })
-    }
-
-    navigate('/screening/rppg', {
-      state: {
-        patient,
-        screening: screeningData,
-      },
-    })
+      navigate('/screening/rppg', { state: { patient, screening: { ...screeningData, _id: response.screening._id, patientId: patient.patientId } } })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to save screening')
+    } finally { setLoading(false) }
   }
 
   return (
@@ -212,6 +184,8 @@ if (patient?.patientId) {
             </div>
           </div>
         )}
+
+        {error && <p role="alert" className="form-error">{error}</p>}
 
         <form
           className="screening-form"
@@ -618,7 +592,7 @@ if (patient?.patientId) {
 
             <button
               className="primary-button"
-              type="submit"
+              type="submit" disabled={loading}
             >
               {t(
                 'screening',

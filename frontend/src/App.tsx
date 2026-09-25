@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
 import PatientRegistration from './pages/PatientRegistration'
 import PatientProfile from './pages/PatientProfile'
 import Screening from './pages/Screening'
+import ScreeningStart from './pages/ScreeningStart'
 import LanguageSelector from './components/LanguageSelector'
 import { t, useLanguage } from './i18n'
 import RPPGScreening from './pages/RPPGScreening'
@@ -16,6 +17,9 @@ import Login from './pages/Login'
 import ProtectedRoute from './components/ProtectedRoute'
 import Unauthorized from './pages/Unauthorized'
 import RoleDashboard from './pages/RoleDashboard'
+import AuthLanding from './pages/AuthLanding'
+import Signup from './pages/Signup'
+import Patients from './pages/Patients'
 
 import {
   Activity,
@@ -372,76 +376,40 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route
-          path="/"
-          element={<Dashboard />}
-        />
+        <Route path="/" element={<AuthLanding />} />
         <Route path="/login" element={<Login />} />
-        <Route
-          path="/patients/register"
-          element={<PatientRegistration />}
-        />
-
-        <Route
-          path="/patients/profile"
-          element={<PatientProfile />}
-        />
+        <Route path="/signup" element={<Signup />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
 
-        <Route
-          path="/screening"
-          element={<Screening />}
-        />
-        <Route
-          path="/screening/rppg"
-          element={<RPPGScreening />}
-        />
-        
-        <Route
-          path="/screening/trustscore"
-          element={<TrustScore />}
-        />
-        <Route
-          path="/screening/triage"
-          element={<Triage />}
-        />
-        <Route
-          path="/referral"
-          element={<Referral />}
-        />
+        <Route element={<ProtectedRoute allowedRoles={['patient', 'asha', 'doctor', 'admin']} />}>
+          <Route path="/patients" element={<Patients />} />
+          <Route path="/patients/register" element={<PatientRegistration />} />
+          <Route path="/patients/profile" element={<PatientProfile />} />
+          <Route path="/screening/start" element={<ScreeningStart />} />
+          <Route path="/screening" element={<Screening />} />
+          <Route path="/screening/rppg" element={<RPPGScreening />} />
+          <Route path="/screening/trustscore" element={<TrustScore />} />
+          <Route path="/screening/triage" element={<Triage />} />
+          <Route path="/referral" element={<Referral />} />
+          <Route path="/referral/tracking" element={<ReferralTracking />} />
+          <Route path="/patient-record" element={<PatientRecord />} />
+          <Route path="/follow-up" element={<FollowUp />} />
+        </Route>
 
-        <Route
-          path="/referral/tracking"
-          element={<ReferralTracking />}
-        />
-        <Route
-          path="/patient-record"
-          element={<PatientRecord />}
-        />
-
-        <Route
-          path="/follow-up"
-          element={<FollowUp />}
-        />
         <Route element={<ProtectedRoute allowedRoles={['patient']} />}>
-          <Route
-            path="/patient"
-            element={<RoleDashboard role="patient" />}
-          />
+          <Route path="/patient" element={<RoleDashboard role="patient" />} />
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={['asha']} />}>
-          <Route
-            path="/asha"
-            element={<RoleDashboard role="asha" />}
-          />
+          <Route path="/asha" element={<RoleDashboard role="asha" />} />
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={['doctor']} />}>
-          <Route
-            path="/doctor"
-            element={<RoleDashboard role="doctor" />}
-          />
+          <Route path="/doctor" element={<RoleDashboard role="doctor" />} />
+        </Route>
+
+        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+          <Route path="/admin" element={<RoleDashboard role="admin" />} />
         </Route>
       </Routes>
     </BrowserRouter>

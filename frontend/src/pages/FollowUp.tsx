@@ -10,6 +10,8 @@ import {
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { t, useLanguage } from '../i18n'
+import { apiFetch } from '../services/api'
+import { useEffect, useState } from 'react'
 import {
   getPatientRecord,
   savePatientRecord,
@@ -26,6 +28,31 @@ function FollowUp() {
   const location = useLocation()
 
   const patient = location.state?.patient as PatientProfile | undefined
+
+  const [error, setError] = useState('')
+  const [latestReferralId, setLatestReferralId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!patient?.patientId || !navigator.onLine) return
+
+    const localReferral = getPatientRecord(patient.patientId)?.referrals.at(-1)?.referralId
+    if (localReferral) {
+      setLatestReferralId(localReferral)
+      return
+    }
+
+    apiFetch<{
+      success: boolean
+      referrals: Array<{ _id: string }>
+    }>(`/referrals/patient/${patient.patientId}`)
+      .then((response) => {
+        const latest = response.referrals?.[0]?._id
+        if (latest) setLatestReferralId(latest)
+      })
+      .catch(() => {
+        // Local cache remains the fallback.
+      })
+  }, [patient?.patientId])
 
   const patientData = patient ?? {
     name: 'Patient',
@@ -261,33 +288,75 @@ function FollowUp() {
             {t('followUp', 'footerNote')}
           </p>
 
+          {error && <p role="alert" className="form-error">{error}</p>}
+
           <button
             className="primary-button"
             type="button"
-            onClick={() => {
-              if (patient?.patientId) {
-                const patientRecord = getPatientRecord(patient.patientId)
+            onClick={async () => {
+              if (!patient?.patientId) { setError('Patient ID is missing.'); return }
+              const patientRecord = getPatientRecord(patient.patientId)
+              const referralId = latestReferralId ?? patientRecord?.referrals.at(-1)?.referralId
+              if (!referralId) { setError('Create a referral before scheduling a follow-up.'); return }
+              try {
+                const scheduledDate = new Date()
+                scheduledDate.setDate(scheduledDate.getDate() + 1)
 
-                if (patientRecord) {
+                if (!navigator.onLine) {
+                  if (!patientRecord) {
+                    setError('Patient record is not available offline.')
+                    return
+                  }
+
                   const followUp: FollowUpRecord = {
-                    followUpId: crypto.randomUUID(),
+                    followUpId: `offline-${crypto.randomUUID()}`,
                     patientId: patient.patientId,
                     createdAt: new Date().toISOString(),
-                    scheduledDate: 'Tomorrow',
+                    scheduledDate: scheduledDate.toISOString(),
                     reminderMethod: 'sms',
                     status: 'scheduled',
                   }
+                  patientRecord.followUps.push(followUp)
+                  savePatientRecord(patientRecord)
+                  navigate('/patient-record', { state: { patient: patientData } })
+                  return
+                }
 
+                const response = await apiFetch<{
+                  success: boolean
+                  followUp: {
+                    _id: string
+                    scheduledDate: string
+                    method: 'sms' | 'call' | 'asha'
+                    status: 'scheduled' | 'completed' | 'missed' | 'cancelled'
+                  }
+                }>('/followups', {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    patientId: patient.patientId,
+                    referralId,
+                    scheduledDate: scheduledDate.toISOString(),
+                    method: 'sms',
+                  }),
+                })
+
+                if (patientRecord) {
+                  const followUp: FollowUpRecord = {
+                    followUpId: response.followUp._id,
+                    patientId: patient.patientId,
+                    createdAt: new Date().toISOString(),
+                    scheduledDate: response.followUp.scheduledDate,
+                    reminderMethod: response.followUp.method,
+                    status: response.followUp.status,
+                  }
                   patientRecord.followUps.push(followUp)
                   savePatientRecord(patientRecord)
                 }
-              }
 
-              navigate('/patient-record', {
-                state: {
-                  patient: patientData,
-                },
-              })
+                navigate('/patient-record', { state: { patient: patientData } })
+              } catch (err) {
+                setError(err instanceof Error ? err.message : 'Unable to schedule follow-up')
+              }
             }}
           >
             <CheckCircle2 size={17} />

@@ -14,24 +14,127 @@ import {
   UserRound,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { t, useLanguage } from '../i18n'
+import { apiFetch } from '../services/api'
 import { getPatientRecord } from '../utils/patientRecordStorage'
+import type { PatientRecord } from '../types/patientRecord'
 
 function PatientRecord() {
   useLanguage()
 
   const navigate = useNavigate()
   const location = useLocation()
-  const patientFromState = location.state?.patient
+  const patientFromState = location.state?.patient as PatientRecord['patient'] | undefined
+  const [record, setRecord] = useState<PatientRecord | null>(null)
+  const [error, setError] = useState('')
 
-  const storedRecord = patientFromState?.patientId
-    ? getPatientRecord(patientFromState.patientId)
-    : undefined
+  useEffect(() => {
+    if (!patientFromState?.patientId) return
 
-  const patient = storedRecord?.patient ?? patientFromState
+    const localRecord = getPatientRecord(patientFromState.patientId)
 
-  // const patient = location.state?.patient
+    if (!navigator.onLine) {
+      setRecord(localRecord ?? null)
+      return
+    }
+
+    apiFetch<{
+      success: boolean
+      patient: {
+        _id: string
+        name: string
+        age: number
+        gender: 'male' | 'female' | 'other'
+        phone?: string
+        village?: string
+        emergencyContact?: string
+        createdAt: string
+      }
+      screenings: any[]
+      triages: any[]
+      referrals: any[]
+      followUps: any[]
+    }>(`/records/${patientFromState.patientId}`)
+      .then((data) => {
+        const patient = {
+          patientId: data.patient._id,
+          name: data.patient.name,
+          age: data.patient.age,
+          gender: data.patient.gender,
+          phone: data.patient.phone,
+          village: data.patient.village || '',
+          emergencyContact: data.patient.emergencyContact,
+          createdAt: data.patient.createdAt,
+        }
+
+        setRecord({
+          patient,
+          screenings: data.screenings.map((x) => ({
+            screeningId: x._id,
+            patientId: typeof x.patient === 'string' ? x.patient : x.patient?._id,
+            recordedAt: x.createdAt,
+            symptoms: x.symptoms || [],
+            duration: x.duration,
+            severity: x.severity != null ? String(x.severity) : undefined,
+            manualVitals: x.hasManualVitals
+              ? {
+                  bloodPressure: x.bloodPressure
+                    ? `${x.bloodPressure.systolic ?? ''}/${x.bloodPressure.diastolic ?? ''}`
+                    : undefined,
+                  pulse: x.heartRate,
+                  temperature: x.temperature,
+                  oxygenSaturation: x.oxygenSaturation,
+                }
+              : undefined,
+            rppg: x.rppg
+              ? {
+                  trustScore: x.rppg.trustScore,
+                  heartRate: x.rppg.heartRate,
+                  measurementAvailable: true,
+                  demoMode: true,
+                }
+              : undefined,
+          })),
+          triageHistory: data.triages.map((x) => ({
+            triageId: x._id,
+            patientId: typeof x.patient === 'string' ? x.patient : x.patient?._id,
+            screeningId: typeof x.screening === 'string' ? x.screening : x.screening?._id,
+            recordedAt: x.createdAt,
+            category: x.category,
+            reasons: x.rationale ? x.rationale.split('; ') : [],
+            measurementAction: x.measurementAction ?? 'none',
+            requiresProfessionalReview: x.category !== 'routine',
+          })),
+          referrals: data.referrals.map((x) => ({
+            referralId: x._id,
+            patientId: typeof x.patient === 'string' ? x.patient : x.patient?._id,
+            triageId: x.triage?._id || x.triage,
+            createdAt: x.createdAt,
+            destination: x.facilityId,
+            reason: x.reason,
+            status: x.status === 'sent' ? 'pending' : x.status,
+          })),
+          followUps: data.followUps.map((x) => ({
+            followUpId: x._id,
+            patientId: typeof x.patient === 'string' ? x.patient : x.patient?._id,
+            createdAt: x.createdAt,
+            scheduledDate: x.scheduledDate,
+            reminderMethod: x.method,
+            status: x.status,
+          })),
+        })
+      })
+      .catch((err) => {
+        setRecord(localRecord ?? null)
+        if (!localRecord) {
+          setError(err instanceof Error ? err.message : 'Unable to load patient record')
+        }
+      })
+  }, [patientFromState?.patientId])
+
+  const patient = record?.patient ?? patientFromState
 
   const patientData = patient ?? {
     name: 'Patient',
@@ -40,16 +143,28 @@ function PatientRecord() {
     phone: '—',
     village: '—',
   }
-  const latestScreening =
-    storedRecord && storedRecord.screenings.length > 0
-      ? storedRecord.screenings[
-          storedRecord.screenings.length - 1
-        ]
-      : undefined
+  const latestScreening = record?.screenings.length
+    ? record.screenings[record.screenings.length - 1]
+    : undefined
+  const latestReferral = record?.referrals.length
+    ? record.referrals[record.referrals.length - 1]
+    : undefined
+  const latestFollowUp = record?.followUps.length
+    ? record.followUps[record.followUps.length - 1]
+    : undefined
+  const latestTrustScore = latestScreening?.rppg?.trustScore
+  const careStatus = latestFollowUp
+    ? 'Follow-up scheduled'
+    : latestReferral
+      ? latestReferral.status === 'pending'
+        ? 'Referral sent'
+        : `Referral ${latestReferral.status}`
+      : 'Screening completed' 
 
   return (
     <div className="page-shell">
       <main className="record-page">
+        {error && <p role="alert" className="form-error">{error}</p>}
 
         {/* Header */}
 
@@ -186,7 +301,9 @@ function PatientRecord() {
               </span>
 
               <strong>
-                86/100
+                {latestTrustScore != null
+                  ? `${latestTrustScore}/100`
+                  : '—'}
               </strong>
             </div>
           </div>
@@ -205,7 +322,7 @@ function PatientRecord() {
               </span>
 
               <strong>
-                {t('record', 'referralSent')}
+                {careStatus}
               </strong>
             </div>
           </div>
@@ -387,7 +504,9 @@ function PatientRecord() {
                 </span>
 
                 <strong>
-                  —
+                  {latestScreening?.rppg?.trustScore != null
+                    ? `${latestScreening.rppg.trustScore}/100`
+                    : '—'}
                 </strong>
 
                 <span className="history-status">

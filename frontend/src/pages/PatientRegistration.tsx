@@ -3,12 +3,12 @@ import type { SubmitEvent } from 'react'
 import { ArrowLeft, CheckCircle2, UserRound } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
-import { saveOfflineRecord } from '../utils/offlineStorage'
 import { t, useLanguage } from '../i18n'
 import type {
   PatientProfile,
 } from '../types/patientRecord'
 import { savePatientRecord } from '../utils/patientRecordStorage'
+import { apiFetch } from '../services/api'
 
 interface PatientData {
   name: string
@@ -44,53 +44,40 @@ function PatientRegistration() {
     }))
   }
 
-  const handleSubmit = (
-  event: SubmitEvent<HTMLFormElement>,
-) => {
-  event.preventDefault()
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  if (!consent) {
-    return
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!consent) return
+    setError('')
+    setLoading(true)
+    const payload = {
+      name: form.name.trim(),
+      age: Number(form.age),
+      gender: form.gender === 'Female' ? 'female' : form.gender === 'Male' ? 'male' : 'other',
+      phone: form.phone || undefined,
+      village: form.village.trim(),
+      emergencyContact: form.emergencyContact || undefined,
+    }
+    try {
+      const response = await apiFetch<{ success: boolean; patient: { _id: string; name: string; age: number; gender: 'male' | 'female' | 'other'; phone?: string; village?: string; emergencyContact?: string; createdAt: string } }>('/patients', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
+      const p = response.patient
+      const patient: PatientProfile = {
+        patientId: p._id, name: p.name, age: p.age, gender: p.gender,
+        phone: p.phone, village: p.village || '', emergencyContact: p.emergencyContact, createdAt: p.createdAt,
+      }
+      savePatientRecord({ patient, screenings: [], triageHistory: [], referrals: [], followUps: [] })
+      navigate('/patients/profile', { state: { patient } })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to register patient')
+    } finally {
+      setLoading(false)
+    }
   }
-
-  const patient: PatientProfile = {
-    patientId: crypto.randomUUID(),
-    name: form.name,
-    age: Number(form.age),
-    gender:
-      form.gender === 'Female'
-        ? 'female'
-        : form.gender === 'Male'
-          ? 'male'
-          : form.gender === 'Other'
-            ? 'other'
-            : 'unknown',
-    phone: form.phone || undefined,
-    village: form.village,
-    emergencyContact:
-      form.emergencyContact || undefined,
-    createdAt: new Date().toISOString(),
-  }
-  const patientRecord = {
-  patient,
-  screenings: [],
-  triageHistory: [],
-  referrals: [],
-  followUps: [],
-  }
-
-  savePatientRecord(patientRecord)
-
-  if (!navigator.onLine) {
-    saveOfflineRecord('patient', patient)
-  }
-
-  navigate('/patients/profile', {
-    state: {
-      patient,
-    },
-  })
-}
 
   return (
     <div className="app-shell">
@@ -151,6 +138,8 @@ function PatientRegistration() {
             {t('screening', 'triage')}
           </div>
         </div>
+
+        {error && <p role="alert" className="form-error">{error}</p>}
 
         <form
           className="registration-form"
@@ -381,7 +370,7 @@ function PatientRegistration() {
             <button
               className="primary-button"
               type="submit"
-              disabled={!consent}
+              disabled={loading || !consent}
             >
               <CheckCircle2 size={18} />
 

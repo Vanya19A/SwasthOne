@@ -13,19 +13,16 @@ import {
   useNavigate,
 } from 'react-router-dom'
 import { t, useLanguage } from '../i18n'
+import { useEffect, useState } from 'react'
+import { apiFetch } from '../services/api'
 import { runTriage } from '../services/triageService'
-import type {
-  TriageInput,
-} from '../types/triage'
-import {
-  getPatientRecord,
-  savePatientRecord,
-} from '../utils/patientRecordStorage'
+import { getPatientRecord, savePatientRecord } from '../utils/patientRecordStorage'
 import type { PatientProfile } from '../types/patientRecord'
 
 
 
 interface ScreeningData {
+  _id?: string
   symptoms: string[]
   duration: string
   severity: string
@@ -66,136 +63,100 @@ function Triage() {
       | RPPGData
       | undefined
 
-  /*
-   * ==========================================
-   * DATA PREPARATION
-   * ==========================================
-   *
-   * Screening and TrustScore currently pass
-   * their data through React Router state.
-   *
-   * We convert that existing data into the
-   * standard TriageInput contract.
-   */
+  const [triageResult, setTriageResult] = useState<{ category: 'routine' | 'consult' | 'urgent'; reasons: string[]; measurementAction: 'none' | 'retake-rppg' | 'manual-verify'; requiresProfessionalReview: boolean; triageId: string } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const parseNumber = (
-    value: string | undefined,
-  ): number | undefined => {
-    if (!value || value.trim() === '') {
-      return undefined
+  useEffect(() => {
+    if (!patient?.patientId || !screening) {
+      setLoading(false)
+      setError('Patient or screening data is missing. Please repeat the screening.')
+      return
     }
 
-    const parsed = Number(value)
+    let cancelled = false
 
-    return Number.isFinite(parsed)
-      ? parsed
-      : undefined
-  }
+    const run = async () => {
+      try {
+        if (screening._id && navigator.onLine) {
+          const response = await apiFetch<{ success: boolean; category: 'routine' | 'consult' | 'urgent'; message: string; measurementAction: 'none' | 'retake-rppg' | 'manual-verify'; triageId: string }>('/triage', {
+            method: 'POST',
+            body: JSON.stringify({ patientId: patient.patientId, screeningId: screening._id, historyScore: 0 }),
+          })
 
-  const parseBloodPressure = (
-    value: string | undefined,
-  ) => {
-    if (!value || value.trim() === '') {
-      return {
-        systolicBP: undefined,
-        diastolicBP: undefined,
+          if (!cancelled) {
+            setTriageResult({
+              category: response.category,
+              reasons: response.message ? response.message.split('; ') : [],
+              measurementAction: response.measurementAction ?? 'none',
+              requiresProfessionalReview: response.category !== 'routine',
+              triageId: response.triageId,
+            })
+          }
+          return
+        }
+
+        const localResult = runTriage({
+          patient: { age: Number(patient.age || 0), gender: patient.gender },
+          symptoms: screening.symptoms,
+          duration: screening.duration,
+          severity: screening.severity,
+          manualVitals: screening.hasManualVitals
+            ? {
+                pulse: screening.pulse ? Number(screening.pulse) : undefined,
+                temperature: screening.temperature ? Number(screening.temperature) : undefined,
+                systolicBP: screening.bloodPressure ? Number(screening.bloodPressure.split('/')[0]) : undefined,
+                diastolicBP: screening.bloodPressure ? Number(screening.bloodPressure.split('/')[1]) : undefined,
+                oxygenSaturation: screening.oxygenSaturation ? Number(screening.oxygenSaturation) : undefined,
+              }
+            : undefined,
+          rppg: rppg
+            ? {
+                trustScore: rppg.trustScore,
+                confidence: rppg.confidence,
+                heartRate: rppg.heartRate,
+                measurementAvailable: true,
+              }
+            : undefined,
+        })
+
+        const triageId = `offline-${crypto.randomUUID()}`
+        if (!cancelled) {
+          setTriageResult({
+            category: localResult.category,
+            reasons: localResult.reasons,
+            measurementAction: localResult.measurementAction,
+            requiresProfessionalReview: localResult.requiresProfessionalReview,
+            triageId,
+          })
+        }
+
+        const record = getPatientRecord(patient.patientId)
+        if (record && !record.triageHistory.some((item) => item.triageId === triageId)) {
+          record.triageHistory.push({
+            triageId,
+            patientId: patient.patientId,
+            screeningId: screening._id,
+            recordedAt: new Date().toISOString(),
+            category: localResult.category,
+            reasons: localResult.reasons,
+            measurementAction: localResult.measurementAction,
+            requiresProfessionalReview: localResult.requiresProfessionalReview,
+          })
+          savePatientRecord(record)
+        }
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Unable to calculate triage')
+      } finally {
+        if (!cancelled) setLoading(false)
       }
     }
 
-    const parts = value.split('/')
+    run()
+    return () => { cancelled = true }
+  }, [patient?.patientId, screening?._id, screening, rppg])
 
-    return {
-      systolicBP: parseNumber(parts[0]),
-      diastolicBP: parseNumber(parts[1]),
-    }
-  }
-
-  const bloodPressure =
-    parseBloodPressure(
-      screening?.bloodPressure,
-    )
-
-  const triageInput: TriageInput = {
-    patient: {
-      age: Number(patient?.age || 0),
-      gender: patient?.gender,
-    },
-
-    symptoms:
-      screening?.symptoms ?? [],
-
-    duration:
-      screening?.duration,
-
-    severity:
-      screening?.severity,
-
-    manualVitals:
-      screening?.hasManualVitals
-        ? {
-            pulse: parseNumber(
-              screening?.pulse,
-            ),
-
-            temperature: parseNumber(
-              screening?.temperature,
-            ),
-
-            systolicBP:
-              bloodPressure.systolicBP,
-
-            diastolicBP:
-              bloodPressure.diastolicBP,
-
-            oxygenSaturation:
-              parseNumber(
-                screening?.oxygenSaturation,
-              ),
-          }
-        : undefined,
-
-    rppg: rppg
-      ? {
-          trustScore:
-            rppg.trustScore,
-
-          confidence:
-            rppg.confidence,
-
-          heartRate:
-            rppg.heartRate,
-
-          heartRateVariability:
-            rppg.heartRateVariability,
-
-          respiratoryRate:
-            rppg.respiratoryRate,
-
-          systolicBP:
-            rppg.systolicBP,
-
-          diastolicBP:
-            rppg.diastolicBP,
-
-          measurementAvailable:
-            typeof rppg.trustScore ===
-            'number',
-        }
-      : undefined,
-  }
-
-  /*
-   * ==========================================
-   * RUN TRIAGE ENGINE
-   * ==========================================
-   */
-
-  const triageResult =
-    runTriage(triageInput)
-
-  const category =
-    triageResult.category
-
+  const category = triageResult?.category ?? 'routine'
   /*
    * ==========================================
    * CATEGORY CONTENT
@@ -271,59 +232,26 @@ function Triage() {
         state: {
           patient,
           screening,
+          rppg,
         },
       },
     )
   }
 
   const handleContinue = () => {
-    if (patient?.patientId) {
-      const patientRecord = getPatientRecord(
-        patient.patientId,
-      )
-
-      if (patientRecord) {
-        patientRecord.triageHistory.push({
-          triageId: crypto.randomUUID(),
-          patientId: patient.patientId,
-          screeningId: undefined,
-          recordedAt: new Date().toISOString(),
-          category,
+    if (!triageResult) return
+    navigate('/referral', {
+      state: {
+        patient, screening, rppg,
+        triage: {
+          category: triageResult.category,
           reasons: triageResult.reasons,
-          measurementAction:
-            triageResult.measurementAction,
-          requiresProfessionalReview:
-            triageResult.requiresProfessionalReview,
-        })
-
-        savePatientRecord(patientRecord)
-      }
-    }
-    navigate(
-      '/referral',
-      {
-        state: {
-          patient,
-          screening,
-          rppg,
-
-          triage: {
-            category,
-
-            reasons:
-              triageResult.reasons,
-
-            measurementAction:
-              triageResult.measurementAction,
-
-            requiresProfessionalReview:
-              triageResult.requiresProfessionalReview,
-
-            demoMode: true,
-          },
+          measurementAction: triageResult.measurementAction,
+          requiresProfessionalReview: triageResult.requiresProfessionalReview,
+          triageId: triageResult.triageId,
         },
       },
-    )
+    })
   }
 
   /*
@@ -335,6 +263,8 @@ function Triage() {
   return (
     <div className="page-shell">
       <main className="triage-page">
+        {loading && <p>Calculating triage…</p>}
+        {error && <p role="alert" className="form-error">{error}</p>}
 
         {/* =========================
             HEADER
@@ -566,7 +496,7 @@ function Triage() {
           </div>
 
           <div className="triage-reasons">
-            {triageResult.reasons.map(
+            {(triageResult?.reasons ?? []).map(
               (reason, index) => (
                 <div
                   key={`${reason}-${index}`}
@@ -672,7 +602,7 @@ function Triage() {
             MEASUREMENT ACTION
            ========================= */}
 
-        {triageResult.measurementAction !==
+        {(triageResult?.measurementAction ?? 'none') !==
           'none' && (
           <section className="triage-safety">
             <AlertTriangle
@@ -701,7 +631,7 @@ function Triage() {
             PROFESSIONAL REVIEW
            ========================= */}
 
-        {triageResult.requiresProfessionalReview && (
+        {triageResult?.requiresProfessionalReview && (
           <section className="triage-safety">
             <Stethoscope
               size={19}
@@ -729,8 +659,8 @@ function Triage() {
             SAFETY
            ========================= */}
 
-        {!triageResult.requiresProfessionalReview &&
-          triageResult.measurementAction ===
+        {!triageResult?.requiresProfessionalReview &&
+          triageResult?.measurementAction ===
             'none' && (
           <section className="triage-safety">
             <Info size={19} />

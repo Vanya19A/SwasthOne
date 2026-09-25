@@ -1,6 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom'
 
-type UserRole = 'patient' | 'asha' | 'doctor'
+type UserRole = 'patient' | 'asha' | 'doctor' | 'admin'
 
 interface ProtectedRouteProps {
   allowedRoles?: UserRole[]
@@ -8,15 +8,10 @@ interface ProtectedRouteProps {
 
 function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   const storedRole = localStorage.getItem('swasthone_role') as UserRole | null
+  const token = localStorage.getItem('swasthone_token')
 
-  if (!storedRole) {
-    return <Navigate to="/login" replace />
-  }
-
-  if (allowedRoles && !allowedRoles.includes(storedRole)) {
-    return <Navigate to="/unauthorized" replace />
-  }
-
+  if (!storedRole || !token) return <Navigate to="/login" replace />
+  if (allowedRoles && !allowedRoles.includes(storedRole)) return <Navigate to="/unauthorized" replace />
   return <Outlet />
 }
 

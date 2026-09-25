@@ -21,10 +21,11 @@ import Sidebar from '../components/Sidebar'
 import BottomNav from '../components/BottomNav'
 import LanguageSelector from '../components/LanguageSelector'
 import { t, useLanguage } from '../i18n'
+import { apiFetch } from '../services/api'
 import { getPendingRecords } from '../utils/offlineStorage'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 
-type Role = 'asha' | 'patient' | 'doctor'
+type Role = 'asha' | 'patient' | 'doctor' | 'admin'
 
 interface RoleDashboardProps {
   role: Role
@@ -37,6 +38,41 @@ function RoleDashboard({ role }: RoleDashboardProps) {
   const isASHA = role === 'asha'
   const isPatient = role === 'patient'
   const isDoctor = role === 'doctor'
+  const isAdmin = role === 'admin'
+
+  const [doctorPatients, setDoctorPatients] = useState<Array<{
+    _id: string
+    name: string
+    age: number
+    gender: 'male' | 'female' | 'other'
+    phone?: string
+    village?: string
+    emergencyContact?: string
+    createdAt: string
+  }>>([])
+
+  useEffect(() => {
+    if ((!isDoctor && !isAdmin) || !navigator.onLine) return
+
+    apiFetch<{ success: boolean; patients: Array<{
+      _id: string
+      name: string
+      age: number
+      gender: 'male' | 'female' | 'other'
+      phone?: string
+      village?: string
+      emergencyContact?: string
+      createdAt: string
+    }> }>('/patients')
+      .then((response) => setDoctorPatients(response.patients))
+      .catch(() => {
+        // Keep the demo dashboard usable if the API is unavailable.
+      })
+  }, [isDoctor, isAdmin])
+
+  const startPatientJourney = () => {
+    navigate('/screening/start')
+  }
 
   const today = new Intl.DateTimeFormat(
     language === 'hi'
@@ -59,9 +95,7 @@ function RoleDashboard({ role }: RoleDashboardProps) {
   return (
     <div className="app-shell">
       <Sidebar
-        activeItem={
-          isPatient ? 'Health Records' : 'Dashboard'
-        }
+        activeItem="Dashboard"
       />
 
       <main className="main-content">
@@ -96,6 +130,7 @@ function RoleDashboard({ role }: RoleDashboardProps) {
               {isASHA && <Users size={25} />}
               {isPatient && <HeartPulse size={25} />}
               {isDoctor && <Stethoscope size={25} />}
+              {isAdmin && <ShieldCheck size={25} />}
             </div>
 
             <div>
@@ -114,6 +149,8 @@ function RoleDashboard({ role }: RoleDashboardProps) {
                     'roleDashboard',
                     'clinicalWorkspace',
                   )}
+
+                {isAdmin && 'Administration workspace'}
               </p>
 
               <h2>
@@ -134,6 +171,8 @@ function RoleDashboard({ role }: RoleDashboardProps) {
                     'roleDashboard',
                     'doctorHeadline',
                   )}
+
+                {isAdmin && 'Keep the demo care network connected.'}
               </h2>
 
               <p>
@@ -154,6 +193,8 @@ function RoleDashboard({ role }: RoleDashboardProps) {
                     'roleDashboard',
                     'doctorDescription',
                   )}
+
+                {isAdmin && 'Review users and patient activity without changing the clinical workflow.'}
               </p>
             </div>
           </div>
@@ -163,7 +204,11 @@ function RoleDashboard({ role }: RoleDashboardProps) {
             type="button"
             onClick={() => {
               if (isDoctor) {
-                navigate('/doctor')
+                navigate('/patients')
+              } else if (isAdmin) {
+                navigate('/patients')
+              } else if (isPatient) {
+                startPatientJourney()
               } else {
                 navigate('/patients/register')
               }
@@ -172,14 +217,10 @@ function RoleDashboard({ role }: RoleDashboardProps) {
             <Plus size={18} />
 
             {isDoctor
-              ? t(
-                  'roleDashboard',
-                  'reviewPatients',
-                )
-              : t(
-                  'roleDashboard',
-                  'startScreening',
-                )}
+              ? t('roleDashboard', 'reviewPatients')
+              : isAdmin
+                ? 'View patients'
+                : t('roleDashboard', 'startScreening')}
           </button>
         </section>
 
@@ -280,7 +321,7 @@ function RoleDashboard({ role }: RoleDashboardProps) {
                       'continueDescription',
                     )}
                     onClick={() =>
-                      navigate('/patients/register')
+                      navigate('/patients')
                     }
                   />
 
@@ -445,9 +486,7 @@ function RoleDashboard({ role }: RoleDashboardProps) {
                       'roleDashboard',
                       'startScreeningDescription',
                     )}
-                    onClick={() =>
-                      navigate('/patients/register')
-                    }
+                    onClick={startPatientJourney}
                   />
 
                   <ActionCard
@@ -461,7 +500,7 @@ function RoleDashboard({ role }: RoleDashboardProps) {
                       'healthRecordsDescription',
                     )}
                     onClick={() =>
-                      navigate('/patient-record')
+                      navigate('/patients')
                     }
                   />
 
@@ -476,7 +515,7 @@ function RoleDashboard({ role }: RoleDashboardProps) {
                       'myReferralsDescription',
                     )}
                     onClick={() =>
-                      navigate('/referral/tracking')
+                      navigate('/patients')
                     }
                   />
                 </div>
@@ -548,6 +587,40 @@ function RoleDashboard({ role }: RoleDashboardProps) {
                 </p>
               </div>
             </section>
+          </>
+        )}
+
+        {/* =================================================
+            ADMIN DASHBOARD
+           ================================================= */}
+
+        {isAdmin && (
+          <>
+            <section className="stats-grid">
+              <StatCard icon={<Users size={21} />} label="Patient records" value={doctorPatients.length ? String(doctorPatients.length) : '—'} note="Accessible in this demo workspace" iconClass="teal" />
+              <StatCard icon={<Stethoscope size={21} />} label="Clinical users" value="2" note="ASHA / Doctor demo accounts" iconClass="green" />
+              <StatCard icon={<ShieldCheck size={21} />} label="System status" value="Ready" note="Local demo environment" iconClass="orange" />
+            </section>
+
+            <div className="content-grid">
+              <section className="panel">
+                <div className="panel-header"><div><p className="section-kicker">Administration</p><h3>Workspace actions</h3></div></div>
+                <div className="quick-actions">
+                  <ActionCard icon={<Users size={21} />} title="View patients" description="Review the shared patient registry." onClick={() => navigate('/patients')} />
+                  <ActionCard icon={<Stethoscope size={21} />} title="View clinical users" description="Demo ASHA and doctor accounts are seeded locally." onClick={() => navigate('/patients')} />
+                  <ActionCard icon={<ClipboardList size={21} />} title="View referrals" description="Open the referral tracking workspace." onClick={() => navigate('/referral/tracking')} />
+                </div>
+              </section>
+
+              <section className="panel">
+                <div className="panel-header"><div><p className="section-kicker">Demo access</p><h3>Seeded accounts</h3></div></div>
+                <div className="quick-actions">
+                  <div className="role-info-card"><div className="role-info-icon"><Users size={22} /></div><div><strong>ASHA / ANM</strong><span>asha@swasthone.demo</span></div></div>
+                  <div className="role-info-card"><div className="role-info-icon"><Stethoscope size={22} /></div><div><strong>Doctor</strong><span>doctor@swasthone.demo</span></div></div>
+                  <div className="role-info-card"><div className="role-info-icon"><ShieldCheck size={22} /></div><div><strong>Administrator</strong><span>admin@swasthone.demo</span></div></div>
+                </div>
+              </section>
+            </div>
           </>
         )}
 
@@ -629,50 +702,51 @@ function RoleDashboard({ role }: RoleDashboardProps) {
               </div>
 
               <div className="doctor-patient-list">
-                <DoctorPatient
-                  initials="AM"
-                  name="Anil Mehta"
-                  age="52 years"
-                  reason="Chest discomfort"
-                  status={t(
-                    'roleDashboard',
-                    'urgent',
-                  )}
-                  statusClass="urgent"
-                  onClick={() =>
-                    navigate('/patient-record')
-                  }
-                />
+                {(doctorPatients.length > 0 ? doctorPatients.slice(0, 3) : [
+                  { _id: 'demo-1', name: 'Anil Mehta', age: 52, gender: 'male' as const, village: 'Demo Village', createdAt: new Date().toISOString() },
+                  { _id: 'demo-2', name: 'Sunita Patel', age: 41, gender: 'female' as const, village: 'Demo Village', createdAt: new Date().toISOString() },
+                  { _id: 'demo-3', name: 'Ramesh Kumar', age: 35, gender: 'male' as const, village: 'Demo Village', createdAt: new Date().toISOString() },
+                ]).map((patient, index) => {
+                  const reasons = ['Chest discomfort', 'Fever + elevated pulse', 'Routine screening']
+                  const statuses = ['urgent', 'consult', 'routine'] as const
+                  const status = statuses[index] ?? 'routine'
+                  const initials = patient.name
+                    .split(' ')
+                    .map((part) => part[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase()
 
-                <DoctorPatient
-                  initials="SP"
-                  name="Sunita Patel"
-                  age="41 years"
-                  reason="Fever + elevated pulse"
-                  status={t(
-                    'roleDashboard',
-                    'consult',
-                  )}
-                  statusClass="consult"
-                  onClick={() =>
-                    navigate('/patient-record')
-                  }
-                />
-
-                <DoctorPatient
-                  initials="RK"
-                  name="Ramesh Kumar"
-                  age="35 years"
-                  reason="Routine screening"
-                  status={t(
-                    'roleDashboard',
-                    'routine',
-                  )}
-                  statusClass="routine"
-                  onClick={() =>
-                    navigate('/patient-record')
-                  }
-                />
+                  return (
+                    <DoctorPatient
+                      key={patient._id}
+                      initials={initials}
+                      name={patient.name}
+                      age={`${patient.age} years`}
+                      reason={reasons[index] ?? 'Screening review'}
+                      status={t('roleDashboard', status)}
+                      statusClass={status}
+                      onClick={() =>
+                        patient._id.startsWith('demo-')
+                          ? undefined
+                          : navigate('/patient-record', {
+                              state: {
+                                patient: {
+                                  patientId: patient._id,
+                                  name: patient.name,
+                                  age: patient.age,
+                                  gender: patient.gender,
+                                  phone: patient.phone,
+                                  village: patient.village || '',
+                                  emergencyContact: patient.emergencyContact,
+                                  createdAt: patient.createdAt,
+                                },
+                              },
+                            })
+                      }
+                    />
+                  )
+                })}
               </div>
             </section>
 

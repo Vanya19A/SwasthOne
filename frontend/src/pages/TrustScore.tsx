@@ -35,6 +35,22 @@ interface ScreeningData {
 
 type AnalysisState = 'processing' | 'result'
 
+interface RPPGData {
+  heartRate: number
+  motion: number
+  motionStability?: number
+  trustScore: number
+  confidence: 'high' | 'medium' | 'low'
+  accept?: boolean
+  temporalStability?: number
+  regionAgreement?: number
+  demoMode?: boolean
+  algorithmAgreement?: number
+  signalQuality?: number
+  lighting?: number
+  methods?: {method:string;heartRate:number|null;quality?:number}[]
+}
+
 function TrustScore() {
   useLanguage()
 
@@ -43,19 +59,14 @@ function TrustScore() {
 
   const patient = location.state?.patient as Patient | undefined
   const screening = location.state?.screening as ScreeningData | undefined
+  const rppg = location.state?.rppg as RPPGData | undefined
 
   const [analysisState, setAnalysisState] =
     useState<AnalysisState>('processing')
 
-  /*
-   * TEMPORARY PROTOTYPE RESULT
-   *
-   * This is NOT the real rPPG result.
-   * The real Python/ML service will replace these values.
-   */
-  const [trustScore] = useState(86)
-
-  const isHighConfidence = trustScore >= 70
+  const trustScore = rppg?.trustScore ?? 0
+  const isHighConfidence = trustScore >= 70 && (rppg?.accept ?? true)
+  const isMediumConfidence = trustScore >= 40 && !isHighConfidence
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -79,10 +90,9 @@ function TrustScore() {
       state: {
         patient,
         screening,
-        rppg: {
+        rppg: rppg ?? {
           trustScore,
-          confidence:
-            isHighConfidence ? 'high' : 'low',
+          confidence: isHighConfidence ? 'high' : 'low',
           demoMode: true,
         },
       },
@@ -278,23 +288,11 @@ function TrustScore() {
                 </div>
 
                 {isHighConfidence ? (
-                  <span className="confidence-badge high">
-                    <CheckCircle2 size={15} />
-
-                    {t(
-                      'trustScore',
-                      'high',
-                    )}
-                  </span>
+                  <span className="confidence-badge high"><CheckCircle2 size={15} />{t('trustScore','high')}</span>
+                ) : isMediumConfidence ? (
+                  <span className="confidence-badge medium"><AlertTriangle size={15} />Medium confidence</span>
                 ) : (
-                  <span className="confidence-badge low">
-                    <AlertTriangle size={15} />
-
-                    {t(
-                      'trustScore',
-                      'low',
-                    )}
-                  </span>
+                  <span className="confidence-badge low"><AlertTriangle size={15} />{t('trustScore','low')}</span>
                 )}
               </div>
 
@@ -359,53 +357,12 @@ function TrustScore() {
 
               {/* Quality factors */}
               <div className="quality-grid">
-                <QualityItem
-                  label={t(
-                    'trustScore',
-                    'signalQuality',
-                  )}
-                  value={t(
-                    'trustScore',
-                    'good',
-                  )}
-                  good={true}
-                />
-
-                <QualityItem
-                  label={t(
-                    'trustScore',
-                    'movement',
-                  )}
-                  value={t(
-                    'trustScore',
-                    'stable',
-                  )}
-                  good={true}
-                />
-
-                <QualityItem
-                  label={t(
-                    'trustScore',
-                    'lighting',
-                  )}
-                  value={t(
-                    'trustScore',
-                    'good',
-                  )}
-                  good={true}
-                />
-
-                <QualityItem
-                  label={t(
-                    'trustScore',
-                    'faceStability',
-                  )}
-                  value={t(
-                    'trustScore',
-                    'stable',
-                  )}
-                  good={true}
-                />
+                <QualityItem label={t('trustScore','signalQuality')} value={`${rppg?.signalQuality ?? 0}%`} good={(rppg?.signalQuality ?? 0) >= 70} />
+                <QualityItem label={t('trustScore','movement')} value={`${rppg?.motionStability ?? rppg?.motion ?? 0}% stable`} good={(rppg?.motionStability ?? rppg?.motion ?? 0) >= 70} />
+                <QualityItem label={t('trustScore','lighting')} value={`${rppg?.lighting ?? 0}%`} good={(rppg?.lighting ?? 0) >= 70} />
+                <QualityItem label="Algorithm agreement" value={`${rppg?.algorithmAgreement ?? 0}%`} good={(rppg?.algorithmAgreement ?? 0) >= 50} />
+                <QualityItem label="Temporal stability" value={`${rppg?.temporalStability ?? 0}%`} good={(rppg?.temporalStability ?? 0) >= 60} />
+                <QualityItem label="Region agreement" value={`${rppg?.regionAgreement ?? 0}%`} good={(rppg?.regionAgreement ?? 0) >= 66} />
               </div>
             </section>
 
@@ -448,12 +405,7 @@ function TrustScore() {
                         )}
                       </span>
 
-                      <strong>
-                        {t(
-                          'trustScore',
-                          'awaitingAnalysis',
-                        )}
-                      </strong>
+                      <strong>{rppg?.heartRate ?? '—'}</strong>
 
                       <small>
                         bpm
@@ -604,17 +556,7 @@ function TrustScore() {
               </button>
             </div>
 
-            {/* Prototype marker */}
-            <div className="prototype-note">
-              <Info size={16} />
 
-              <span>
-                {t(
-                  'trustScore',
-                  'prototypeNote',
-                )}
-              </span>
-            </div>
           </>
         )}
       </main>

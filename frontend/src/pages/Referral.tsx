@@ -12,7 +12,9 @@ import {
   Stethoscope,
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { t, useLanguage } from '../i18n'
+import { apiFetch } from '../services/api'
 import type {
   PatientProfile,
   ReferralRecord,
@@ -38,6 +40,7 @@ interface RPPGData {
   trustScore: number
   confidence: 'high' | 'low'
   demoMode?: boolean
+  triageId?: string
 }
 
 interface TriageData {
@@ -52,6 +55,7 @@ interface TriageData {
     | 'manual-verify'
   requiresProfessionalReview?: boolean
   demoMode?: boolean
+  triageId?: string
 }
 
 interface Facility {
@@ -121,8 +125,38 @@ function Referral() {
     },
   ]
 
-  const selectedFacility =
-    facilities[0]
+  const [availableFacilities, setAvailableFacilities] = useState<Facility[]>(facilities)
+  const [selectedFacility, setSelectedFacility] = useState<Facility>(facilities[0])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!navigator.onLine) return
+
+    apiFetch<{ success: boolean; facilities: Array<{
+      facilityId: string
+      name: string
+      type: string
+      phone?: string
+    }> }>('/facilities')
+      .then((response) => {
+        if (!response.facilities?.length) return
+        const mapped = response.facilities.map((facility) => ({
+          id: facility.facilityId,
+          name: facility.name,
+          type: facility.type.toUpperCase(),
+          distance: '—',
+          doctor: 'Facility data available',
+          availability: 'Available',
+          queue: '—',
+        }))
+        setAvailableFacilities(mapped)
+        setSelectedFacility(mapped[0])
+      })
+      .catch(() => {
+        // Keep the demo fallback facilities when the API is unavailable.
+      })
+  }, [])
 
   const handleBack = () => {
     navigate('/screening/triage', {
@@ -134,47 +168,112 @@ function Referral() {
     })
   }
 
-  const handleCreateReferral = () => {
-    if (patient?.patientId) {
-      const patientRecord = getPatientRecord(
-        patient.patientId,
-      )
+  const handleCreateReferral = async () => {
+    if (!patient?.patientId || !triage?.triageId) { setError('Patient or triage ID is missing.'); return }
+    setLoading(true); setError('')
+    try {
+      const preferredDate = new Date()
+      preferredDate.setDate(preferredDate.getDate() + 1)
+      const reason = triage.category === 'urgent'
+        ? 'Urgent clinical review'
+        : 'Clinical review'
+      const patientRecord = getPatientRecord(patient.patientId)
 
-      if (patientRecord) {
-        const referral: ReferralRecord = {
-          referralId: crypto.randomUUID(),
+      if (!navigator.onLine) {
+        if (!patientRecord) {
+          setError('Patient record is not available offline.')
+          return
+        }
+
+        const offlineReferral: ReferralRecord = {
+          referralId: `offline-${crypto.randomUUID()}`,
           patientId: patient.patientId,
-          screeningId: undefined,
-          triageId: undefined,
+          triageId: triage.triageId,
           createdAt: new Date().toISOString(),
           destination: selectedFacility.name,
-          reason:
-            triage?.category === 'urgent'
-              ? 'Urgent clinical review'
-              : 'Clinical review',
+          reason,
           status: 'pending',
         }
 
-        patientRecord.referrals.push(referral)
+        patientRecord.referrals.push(offlineReferral)
+        savePatientRecord(patientRecord)
 
+        navigate('/referral/tracking', {
+          state: {
+            patient,
+            screening,
+            rppg,
+            triage,
+            facility: selectedFacility,
+            referral: {
+              _id: offlineReferral.referralId,
+              status: 'sent',
+              facilityId: selectedFacility.id,
+              preferredDate: preferredDate.toISOString(),
+              reason,
+            },
+          },
+        })
+        return
+      }
+
+      const response = await apiFetch<{
+        success: boolean
+        referral: {
+          _id: string
+          status: 'sent' | 'accepted' | 'completed' | 'cancelled'
+          facilityId: string
+          preferredDate: string
+          reason: string
+        }
+      }>('/referrals', {
+        method: 'POST',
+        body: JSON.stringify({
+          patientId: patient.patientId,
+          triageId: triage.triageId,
+          triageCategory: triage.category,
+          facilityId: selectedFacility.id,
+          preferredDate: preferredDate.toISOString(),
+          reason,
+        }),
+      })
+
+      if (patientRecord) {
+        patientRecord.referrals.push({
+          referralId: response.referral._id,
+          patientId: patient.patientId,
+          triageId: triage.triageId,
+          createdAt: new Date().toISOString(),
+          destination: selectedFacility.name,
+          reason: response.referral.reason,
+          status: response.referral.status === 'sent'
+            ? 'pending'
+            : response.referral.status as ReferralRecord['status'],
+        })
         savePatientRecord(patientRecord)
       }
-    }
 
-    navigate('/referral/tracking', {
-      state: {
-        patient,
-        screening,
-        rppg,
-        triage,
-        facility: selectedFacility,
-      },
-    })
+      navigate('/referral/tracking', {
+        state: {
+          patient,
+          screening,
+          rppg,
+          triage,
+          facility: selectedFacility,
+          referral: response.referral,
+        },
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to create referral')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className="page-shell">
       <main className="referral-page">
+        {error && <p role="alert" className="form-error">{error}</p>}
 
         {/* Header */}
 
@@ -400,21 +499,17 @@ function Referral() {
           </div>
 
           <div className="facility-list">
-            {facilities.map(
-              (
-                facility,
-                index,
-              ) => (
+            {availableFacilities.map(
+              (facility) => (
                 <button
                   key={
                     facility.id
                   }
                   className={`facility-card ${
-                    index === 0
-                      ? 'selected'
-                      : ''
+                    facility.id === selectedFacility.id ? 'selected' : ''
                   }`}
                   type="button"
+                  onClick={() => setSelectedFacility(facility)}
                 >
                   <div className="facility-icon">
                     <Hospital size={22} />
@@ -426,8 +521,8 @@ function Referral() {
                         {facility.name}
                       </h3>
 
-                      {index ===
-                        0 && (
+                      {facility.id ===
+                        selectedFacility.id && (
                         <span className="selected-facility">
                           <CheckCircle2
                             size={
@@ -594,6 +689,7 @@ function Referral() {
             onClick={
               handleCreateReferral
             }
+            disabled={loading}
           >
             <Send size={17} />
 

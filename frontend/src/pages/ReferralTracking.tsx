@@ -10,15 +10,26 @@ import {
   Phone,
   Send,
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { t, useLanguage } from '../i18n'
+import { apiFetch } from '../services/api'
 import {
   getPatientRecord,
+  savePatientRecord,
 } from '../utils/patientRecordStorage'
 import type {
   PatientProfile,
   ReferralRecord,
 } from '../types/patientRecord'
+
+interface ReferralApiRecord {
+  _id: string
+  status: 'sent' | 'accepted' | 'completed' | 'cancelled'
+  facilityId: string
+  preferredDate: string
+  reason: string
+}
 
 function ReferralTracking() {
   useLanguage()
@@ -32,44 +43,71 @@ function ReferralTracking() {
     ? getPatientRecord(patient.patientId)
     : undefined
 
-  const latestReferral: ReferralRecord | undefined =
+  const localReferral: ReferralRecord | undefined =
     storedRecord && storedRecord.referrals.length > 0
-      ? storedRecord.referrals[
-          storedRecord.referrals.length - 1
-        ]
+      ? storedRecord.referrals[storedRecord.referrals.length - 1]
       : undefined
 
+  const [serverReferral, setServerReferral] = useState<ReferralApiRecord | null>(
+    location.state?.referral ?? null,
+  )
+  const [updatingStatus, setUpdatingStatus] = useState(false)
+
+  useEffect(() => {
+    const referralId = serverReferral?._id ?? localReferral?.referralId
+    if (!referralId || !navigator.onLine) return
+
+    apiFetch<{ success: boolean; referral: ReferralApiRecord }>(`/referrals/${referralId}`)
+      .then((response) => setServerReferral(response.referral))
+      .catch(() => {
+        // Keep local referral data when the API is temporarily unavailable.
+      })
+  }, [serverReferral?._id, localReferral?.referralId])
+
+  const referralStatus = serverReferral?.status ??
+    (localReferral?.status === 'pending' ? 'sent' : localReferral?.status) ??
+    'sent'
+
   const facility = location.state?.facility ?? {
-    name: latestReferral?.destination ?? 'Primary Health Centre',
+    name: localReferral?.destination ?? 'Primary Health Centre',
     type: 'PHC',
     distance: '3.2 km',
   }
+
+  const statusRank: Record<string, number> = {
+    sent: 1,
+    accepted: 2,
+    completed: 5,
+    cancelled: 0,
+  }
+
+  const rank = statusRank[referralStatus] ?? 1
 
   const steps = [
     {
       title: t('referral', 'created'),
       description: t('referral', 'createdDescription'),
-      completed: true,
+      completed: referralStatus !== 'cancelled',
     },
     {
       title: t('referral', 'sent'),
       description: t('referral', 'sentDescription'),
-      completed: true,
+      completed: rank >= 1,
     },
     {
       title: t('referral', 'accepted'),
       description: t('referral', 'acceptedDescription'),
-      completed: false,
+      completed: rank >= 2,
     },
     {
       title: t('referral', 'appointment'),
       description: t('referral', 'appointmentDescription'),
-      completed: false,
+      completed: rank >= 5,
     },
     {
       title: t('referral', 'consulted'),
       description: t('referral', 'consultedDescription'),
-      completed: false,
+      completed: rank >= 5,
     },
     {
       title: t('referral', 'followUp'),
@@ -77,6 +115,49 @@ function ReferralTracking() {
       completed: false,
     },
   ]
+
+  const handleAdvanceStatus = async () => {
+    if (!serverReferral?._id || serverReferral._id.startsWith('offline-') || !navigator.onLine) return
+
+    const nextStatus =
+      serverReferral.status === 'sent'
+        ? 'accepted'
+        : serverReferral.status === 'accepted'
+          ? 'completed'
+          : null
+
+    if (!nextStatus) return
+
+    setUpdatingStatus(true)
+    try {
+      const response = await apiFetch<{ success: boolean; referral: ReferralApiRecord }>(
+        `/referrals/${serverReferral._id}/status`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ status: nextStatus }),
+        },
+      )
+      setServerReferral(response.referral)
+
+      if (patient?.patientId) {
+        const record = getPatientRecord(patient.patientId)
+        const index = record?.referrals.findIndex(
+          (item) => item.referralId === response.referral._id,
+        )
+        if (record && index != null && index >= 0) {
+          record.referrals[index].status =
+            response.referral.status === 'sent'
+              ? 'pending'
+              : response.referral.status
+          savePatientRecord(record)
+        }
+      }
+    } catch {
+      // The current server state remains visible if the update fails.
+    } finally {
+      setUpdatingStatus(false)
+    }
+  }
 
   return (
     <div className="page-shell">
@@ -144,7 +225,7 @@ function ReferralTracking() {
               {t('referral', 'currentStatus')}
             </span>
 
-            <h2>{t('referral', 'sent')}</h2>
+            <h2>{referralStatus === 'accepted' ? t('referral', 'accepted') : referralStatus === 'completed' ? 'Completed' : referralStatus === 'cancelled' ? 'Cancelled' : t('referral', 'sent')}</h2>
 
             <p>
               {t('referral', 'statusDescription')}
@@ -153,9 +234,9 @@ function ReferralTracking() {
 
           <span className="tracking-status-badge">
             <Clock3 size={14} />
-            {latestReferral?.status === 'pending'
+            {referralStatus === 'sent'
               ? 'Pending acceptance'
-              : latestReferral?.status ?? 'Pending acceptance'}
+              : referralStatus}
           </span>
         </section>
 
@@ -258,6 +339,23 @@ function ReferralTracking() {
             </p>
           </div>
         </section>
+        {(referralStatus === 'sent' || referralStatus === 'accepted') && (
+          <div className="form-footer">
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={handleAdvanceStatus}
+              disabled={updatingStatus || serverReferral?._id.startsWith('offline-') || !navigator.onLine}
+            >
+              {updatingStatus
+                ? 'Updating…'
+                : referralStatus === 'sent'
+                  ? 'Demo: Mark accepted'
+                  : 'Demo: Mark completed'}
+            </button>
+          </div>
+        )}
+
         <div className="form-footer tracking-footer">
           <p>
             Continue the patient's care journey in the longitudinal record.
