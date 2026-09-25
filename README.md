@@ -2,8 +2,6 @@
 
 ### AI-Assisted Rural Healthcare Access, Screening & Continuity Platform
 
-**SIH 2026 | Team Nexify | Problem Statement: SIH26133**
-
 SwasthOne is an integrated rural healthcare platform connecting patients, ASHA/ANM frontline workers, doctors, and healthcare facilities across the complete care journey.
 
 > **ACCESS → SCREEN → TRIAGE → CONSULT → REFER → FOLLOW-UP → CONTINUITY**
@@ -39,9 +37,9 @@ Browser Camera
       ↓
 Face Detection
       ↓
-3 Facial ROIs
+ Facial ROIs
       ↓
-7 rPPG Methods
+ rPPG Methods
       ↓
 Temporal & Cross-Method Consensus
       ↓
@@ -148,10 +146,6 @@ cd rppg_service
 pip install -r requirements.txt
 python service.py
 ```
-
-Create the required `.env` files using the provided `.env.example` files.
-
-**Never commit `.env` files or credentials.**
 
 ---
 
