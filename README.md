@@ -1,88 +1,169 @@
-# SwasthOne — Integrated Frontend + Backend
+# SwasthOne
 
-## Integration status
-The frontend and backend have been wired together for the main demo flow. The integrated package was audited against the uploaded frontend and backend versions; several connection and workflow issues were corrected, including API wiring, referral/follow-up tracking, role handling, the malformed Screening schema, and duplicate JSX attributes.
+### AI-Assisted Rural Healthcare Access, Screening & Continuity Platform
 
-This package combines the latest uploaded frontend app-shell with the fixed Express/MongoDB backend.
+**SIH 2026 | Team Nexify | Problem Statement: SIH26133**
 
-## Local setup
+SwasthOne is an integrated rural healthcare platform connecting patients, ASHA/ANM frontline workers, doctors, and healthcare facilities across the complete care journey.
 
-### 1. Backend
+> **ACCESS → SCREEN → TRIAGE → CONSULT → REFER → FOLLOW-UP → CONTINUITY**
 
-```bash
-cd backend
-cp .env.example .env
-# Set MONGODB_URI and JWT_SECRET in .env
-npm install
-npm run dev
+---
+
+## 🚀 Key Features
+
+- 👤 Patient & ASHA-assisted registration
+- 🩺 Symptom and medical-history capture
+- ❤️ Smartphone-based rPPG screening
+- 🛡️ TrustScore for measurement confidence
+- 🧠 Digital triage — Routine / Consult / Urgent
+- 🔄 Referral creation and tracking
+- 📋 Longitudinal patient records
+- 👨‍⚕️ Doctor workflow
+- 🏥 Facility information
+- 📱 Responsive PWA
+- 🌐 Multilingual-ready interface
+
+---
+
+## ❤️ rPPG + TrustScore
+
+SwasthOne uses a short smartphone camera recording to estimate heart rate through facial rPPG signals.
+
+### V2 Pipeline
+
+```text
+Browser Camera
+      ↓
+30-sec Video
+      ↓
+Face Detection
+      ↓
+3 Facial ROIs
+      ↓
+7 rPPG Methods
+      ↓
+Temporal & Cross-Method Consensus
+      ↓
+TrustScore
+      ↓
+ACCEPT / RETAKE
 ```
 
-Default backend port: **5050**.
+### rPPG Methods
 
-Health check:
+- POS
+- CHROME
+- GREEN
+- ICA
+- LGI
+- PBV
+- OMIT
 
-```bash
-curl http://localhost:5050/api/health
+TrustScore evaluates signal quality, temporal stability, algorithm agreement, region agreement, motion, and lighting.
+
+> **Note:** rPPG and TrustScore are screening/support features and are not a substitute for clinically validated medical equipment or professional medical advice.
+
+---
+
+## 🔄 Core Workflow
+
+```text
+Registration
+     ↓
+Symptoms / History
+     ↓
+rPPG Screening
+     ↓
+TrustScore
+     ↓
+Digital Triage
+     ↓
+Doctor Review
+     ↓
+Referral
+     ↓
+Follow-up
+     ↓
+Longitudinal Record
 ```
 
-### 2. Frontend
+---
+
+## 🏗️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React + TypeScript + Vite |
+| PWA | Vite PWA |
+| Backend | Node.js + Express |
+| Database | MongoDB + Mongoose |
+| rPPG Service | Python + Flask |
+| Computer Vision | OpenCV |
+| Signal Processing | NumPy + SciPy |
+
+---
+
+## 🏛️ Architecture
+
+```text
+             React / TypeScript PWA
+                       │
+              ┌────────┴────────┐
+              ↓                 ↓
+       Node.js / Express    Python / Flask
+          Backend API        rPPG V2 Service
+              │
+              ↓
+          MongoDB
+```
+
+The rPPG engine runs as a separate Python service so the tested V2 pipeline remains independent from the Node.js backend.
+
+---
+
+
+## ⚙️ Local Setup
+
+### Frontend
 
 ```bash
 cd frontend
-cp .env.example .env
 npm install
 npm run dev
 ```
 
-Frontend: `http://localhost:5173`
-
-Frontend API target: `http://localhost:5050/api`
-
-## Test account
-
-Use an existing backend account or create one through:
+### Backend
 
 ```bash
-curl -X POST http://localhost:5050/api/auth/register \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"Test ASHA","email":"testasha@example.com","password":"Test@123","role":"health_worker"}'
+cd backend
+npm install
+npm start
 ```
 
-Then log in from the frontend.
+### rPPG Service
 
-## Integrated workflow
+```bash
+cd rppg_service
+pip install -r requirements.txt
+python service.py
+```
 
-Login → patient registration → screening → rPPG result persistence → TrustScore → backend triage → referral → patient record → follow-up.
+Create the required `.env` files using the provided `.env.example` files.
 
-## rPPG note
+**Never commit `.env` files or credentials.**
 
-The browser rPPG screen currently uses the project's prototype/demo measurement values (HR 72, motion 0.1, TrustScore 86) and persists them through `/api/rppg`. The uploaded ALIVE repository is a research/training codebase rather than a ready HTTP inference service, so production ML inference is not claimed by this package.
+---
 
-## Important
+## ☁️ Deployment
 
-Do not commit `.env` files, JWT secrets, or database credentials.
+The application is designed for separate deployment of:
 
+- React frontend
+- Node.js backend
+- Python rPPG service
+- MongoDB Atlas
+  
+---
 
-## Main demo flow
-
-1. Login as an ASHA/ANM (backend role: `health_worker`).
-2. Register a patient.
-3. Capture symptoms/manual vitals.
-4. Run the 30-second prototype rPPG screen.
-5. Persist the rPPG result and TrustScore.
-6. Run backend triage.
-7. Create a referral using facility data from the backend.
-8. Track and advance the referral status.
-9. Open the longitudinal patient record.
-10. Schedule a follow-up.
-
-## Prototype limitations
-
-- The browser rPPG screen still uses the project's demo values (HR 72, motion 0.1, TrustScore 86). It is wired to persistence, but it is not a production ML inference service.
-- Offline screens can continue locally, but a full background synchronization engine is not included yet.
-- Patient self-login is intentionally not enabled because the supplied backend provisions `health_worker`, `doctor`, and `admin` accounts, not patient accounts.
-- ABDM/eSanjeevani are not claimed as live integrations.
-
-### Authentication
-
-The app supports three frontend roles: Patient, ASHA/ANM, and Doctor/Medical Officer. Patient self-sign-up is available from the public entry screen; ASHA/ANM and doctor accounts are intended to be provisioned/registered by an authorized project administrator or backend workflow. If `JWT_SECRET` is omitted for local development, the backend generates a temporary process-level secret and warns in the terminal; set a real `JWT_SECRET` for shared/production deployments.
+SwasthOne is a hackathon prototype for healthcare screening and workflow support. rPPG measurements may be affected by motion, lighting, camera quality, and other factors. Clinical decisions should be made by qualified healthcare professionals.
