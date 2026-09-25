@@ -30,7 +30,7 @@ SwasthOne is an integrated rural healthcare platform connecting patients, ASHA/A
 
 SwasthOne uses a short smartphone camera recording to estimate heart rate through facial rPPG signals.
 
-### V2 Pipeline
+### Pipeline
 
 ```text
 Browser Camera
