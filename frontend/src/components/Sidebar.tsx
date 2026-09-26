@@ -5,8 +5,6 @@ import {
   Home,
   LogOut,
   Settings,
-  ShieldCheck,
-  Stethoscope,
   Users,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'

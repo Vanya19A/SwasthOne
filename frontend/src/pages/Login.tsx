@@ -61,7 +61,9 @@ function Login() {
     <div className="login-page">
       <div className="login-card">
         <div className="login-brand">
-          <div className="login-brand-icon"><Activity size={24} /></div>
+          <div className="login-brand-icon">
+            <Activity size={24} />
+          </div>
           <div>
             <strong>SwasthOne</strong>
             <span>Healthcare, closer to you</span>
@@ -74,12 +76,20 @@ function Login() {
           <p>Log in to continue your SwasthOne healthcare workflow.</p>
         </div>
 
-        {state.message && <p className="auth-success" role="status">{state.message}</p>}
+        {state.message && (
+          <p className="auth-success" role="status">
+            {state.message}
+          </p>
+        )}
 
         <form className="login-form" onSubmit={handleSubmit}>
           <div className="form-field">
             <label htmlFor="role">Continue as</label>
-            <select id="role" value={role} onChange={(event) => setRole(event.target.value as UserRole)}>
+            <select
+              id="role"
+              value={role}
+              onChange={(event) => setRole(event.target.value as UserRole)}
+            >
               <option value="patient">Patient</option>
               <option value="asha">ASHA / ANM</option>
               <option value="doctor">Doctor / Medical Officer</option>
@@ -91,7 +101,15 @@ function Login() {
             <label htmlFor="identifier">Email address</label>
             <div className="input-with-icon">
               <Mail size={18} />
-              <input id="identifier" type="email" value={identifier} onChange={(event) => setIdentifier(event.target.value)} placeholder="Enter your email" autoComplete="username" required />
+              <input
+                id="identifier"
+                type="email"
+                value={identifier}
+                onChange={(event) => setIdentifier(event.target.value)}
+                placeholder="Enter your email"
+                autoComplete="username"
+                required
+              />
             </div>
           </div>
 
@@ -99,33 +117,59 @@ function Login() {
             <label htmlFor="password">Password</label>
             <div className="input-with-icon">
               <LockKeyhole size={18} />
-              <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" autoComplete="current-password" required />
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Enter your password"
+                autoComplete="current-password"
+                required
+              />
             </div>
           </div>
 
-          {error && <p role="alert" className="form-error">{error}</p>}
+          {error && (
+            <p role="alert" className="form-error">
+              {error}
+            </p>
+          )}
 
           <button className="login-button" type="submit" disabled={loading}>
-            {loading ? 'Signing in…' : 'Sign in'}
+            {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
 
-        {role === 'patient' && (
-          <p className="auth-switch">New to SwasthOne? <button type="button" onClick={() => navigate('/signup')}>Create a patient account</button></p>
+        {role === "patient" && (
+          <p className="auth-switch">
+            New to SwasthOne?{" "}
+            <button type="button" onClick={() => navigate("/signup")}>
+              Create a patient account
+            </button>
+          </p>
         )}
 
         <div className="login-security">
           <ShieldCheck size={18} />
           <div>
             <strong>Protected healthcare access</strong>
-            <span>Use your own patient account or an authorized ASHA/ANM, doctor, or administrator account.</span>
+            <span>
+              Use your own patient account or an authorized ASHA/ANM, doctor, or
+              administrator account.
+            </span>
           </div>
         </div>
 
-        <button className="login-back-button" type="button" onClick={() => navigate('/')}>← Back to SwasthOne</button>
+        <button
+          className="login-back-button"
+          type="button"
+          onClick={() => navigate("/dashboard")}
+        >
+          ← Back to SwasthOne
+        </button>
       </div>
     </div>
-  )
+  );
 }
 
 export default Login

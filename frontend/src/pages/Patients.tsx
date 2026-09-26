@@ -1,4 +1,4 @@
-import { Activity, ArrowRight, Bell, Plus, ShieldCheck, Stethoscope, UserRound, Users } from 'lucide-react'
+import { Activity, Bell, Plus, ShieldCheck, Stethoscope, UserRound, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'

@@ -1,25 +1,25 @@
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Route, Routes, useNavigate } from "react-router-dom";
 
-import PatientRegistration from './pages/PatientRegistration'
-import PatientProfile from './pages/PatientProfile'
-import Screening from './pages/Screening'
-import ScreeningStart from './pages/ScreeningStart'
-import LanguageSelector from './components/LanguageSelector'
-import { t, useLanguage } from './i18n'
-import RPPGScreening from './pages/RPPGScreening'
-import TrustScore from './pages/TrustScore'
-import Triage from './pages/Triage'
-import Referral from './pages/Referral'
-import ReferralTracking from './pages/ReferralTracking'
-import PatientRecord from './pages/PatientRecord'
-import FollowUp from './pages/FollowUp'
-import Login from './pages/Login'
-import ProtectedRoute from './components/ProtectedRoute'
-import Unauthorized from './pages/Unauthorized'
-import RoleDashboard from './pages/RoleDashboard'
-import AuthLanding from './pages/AuthLanding'
-import Signup from './pages/Signup'
-import Patients from './pages/Patients'
+import PatientRegistration from "./pages/PatientRegistration";
+import PatientProfile from "./pages/PatientProfile";
+import Screening from "./pages/Screening";
+import ScreeningStart from "./pages/ScreeningStart";
+import LanguageSelector from "./components/LanguageSelector";
+import { t, useLanguage } from "./i18n";
+import RPPGScreening from "./pages/RPPGScreening";
+import TrustScore from "./pages/TrustScore";
+import Triage from "./pages/Triage";
+import Referral from "./pages/Referral";
+import ReferralTracking from "./pages/ReferralTracking";
+import PatientRecordPage from "./pages/PatientRecord";
+import FollowUp from "./pages/FollowUp";
+import Login from "./pages/Login";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Unauthorized from "./pages/Unauthorized";
+import RoleDashboard from "./pages/RoleDashboard";
+import AuthLanding from "./pages/AuthLanding";
+import Signup from "./pages/Signup";
+import Patients from "./pages/Patients";
 
 import {
   Activity,
@@ -31,28 +31,27 @@ import {
   ShieldCheck,
   Stethoscope,
   Users,
-} from 'lucide-react'
+} from "lucide-react";
 
-import Sidebar from './components/Sidebar'
-import BottomNav from './components/BottomNav'
-import './App.css'
+import Sidebar from "./components/Sidebar";
+import BottomNav from "./components/BottomNav";
+import "./App.css";
 
 function Dashboard() {
-  useLanguage()
-  const navigate = useNavigate()
+  useLanguage();
+  const navigate = useNavigate();
 
   return (
     <div className="app-shell">
       <Sidebar />
 
       <main className="main-content">
-        {/* =========================
-            TOP HEADER
-           ========================= */}
+        {/* TOP HEADER */}
         <header className="topbar">
           <div>
             <p className="eyebrow">Thursday, 10 September 2026</p>
-            <h1>{t('dashboard', 'greeting')} 👋</h1>
+
+            <h1>{t("dashboard", "greeting")} 👋</h1>
           </div>
 
           <div className="topbar-actions">
@@ -69,9 +68,7 @@ function Dashboard() {
           </div>
         </header>
 
-        {/* =========================
-            WELCOME CARD
-           ========================= */}
+        {/* WELCOME CARD */}
         <section className="welcome-card">
           <div className="welcome-content">
             <div className="welcome-icon">
@@ -79,29 +76,25 @@ function Dashboard() {
             </div>
 
             <div>
-              <p className="welcome-label">
-                {t('dashboard', 'overview')}
-              </p>
+              <p className="welcome-label">{t("dashboard", "overview")}</p>
 
-              <h2>{t('dashboard', 'headline')}</h2>
+              <h2>{t("dashboard", "headline")}</h2>
 
-              <p>{t('dashboard', 'description')}</p>
+              <p>{t("dashboard", "description")}</p>
             </div>
           </div>
 
           <button
             className="primary-button"
             type="button"
-            onClick={() => navigate('/patients/register')}
+            onClick={() => navigate("/patients/register")}
           >
             <Plus size={18} />
-            {t('dashboard', 'startScreening')}
+            {t("dashboard", "startScreening")}
           </button>
         </section>
 
-        {/* =========================
-            STATS
-           ========================= */}
+        {/* STATS */}
         <section className="stats-grid">
           <div className="stat-card">
             <div className="stat-icon teal">
@@ -110,14 +103,12 @@ function Dashboard() {
 
             <div>
               <span className="stat-label">
-                {t('dashboard', 'patientsToday')}
+                {t("dashboard", "patientsToday")}
               </span>
 
               <strong>24</strong>
 
-              <small>
-                {t('dashboard', 'fromYesterday')}
-              </small>
+              <small>{t("dashboard", "fromYesterday")}</small>
             </div>
           </div>
 
@@ -127,15 +118,11 @@ function Dashboard() {
             </div>
 
             <div>
-              <span className="stat-label">
-                {t('dashboard', 'screenings')}
-              </span>
+              <span className="stat-label">{t("dashboard", "screenings")}</span>
 
               <strong>18</strong>
 
-              <small>
-                {t('dashboard', 'completed')}
-              </small>
+              <small>{t("dashboard", "completed")}</small>
             </div>
           </div>
 
@@ -145,101 +132,82 @@ function Dashboard() {
             </div>
 
             <div>
-              <span className="stat-label">
-                {t('dashboard', 'followUps')}
-              </span>
+              <span className="stat-label">{t("dashboard", "followUps")}</span>
 
               <strong>7</strong>
 
-              <small>
-                {t('dashboard', 'dueToday')}
-              </small>
+              <small>{t("dashboard", "dueToday")}</small>
             </div>
           </div>
         </section>
 
-        {/* =========================
-            MAIN CONTENT
-           ========================= */}
+        {/* MAIN CONTENT */}
         <div className="content-grid">
           {/* QUICK ACTIONS */}
           <section className="panel">
             <div className="panel-header">
               <div>
                 <p className="section-kicker">
-                  {t('dashboard', 'patientWorkflow')}
+                  {t("dashboard", "patientWorkflow")}
                 </p>
 
-                <h3>
-                  {t('dashboard', 'quickActions')}
-                </h3>
+                <h3>{t("dashboard", "quickActions")}</h3>
               </div>
             </div>
 
             <div className="quick-actions">
-              {/* Register */}
+              {/* REGISTER PATIENT */}
               <button
                 className="action-card"
                 type="button"
-                onClick={() => navigate('/patients/register')}
+                onClick={() => navigate("/patients/register")}
               >
                 <div className="action-icon">
                   <Users size={21} />
                 </div>
 
                 <div>
-                  <strong>
-                    {t('dashboard', 'registerPatient')}
-                  </strong>
+                  <strong>{t("dashboard", "registerPatient")}</strong>
 
-                  <span>
-                    {t('dashboard', 'registerDescription')}
-                  </span>
+                  <span>{t("dashboard", "registerDescription")}</span>
                 </div>
 
                 <ChevronRight size={18} />
               </button>
 
-              {/* Continue screening */}
+              {/* CONTINUE SCREENING */}
               <button
                 className="action-card"
                 type="button"
-                onClick={() => navigate('/patients/register')}
+                onClick={() => navigate("/screening/start")}
               >
                 <div className="action-icon">
                   <Activity size={21} />
                 </div>
 
                 <div>
-                  <strong>
-                    {t('dashboard', 'continueScreening')}
-                  </strong>
+                  <strong>{t("dashboard", "continueScreening")}</strong>
 
-                  <span>
-                    {t('dashboard', 'continueDescription')}
-                  </span>
+                  <span>{t("dashboard", "continueDescription")}</span>
                 </div>
 
                 <ChevronRight size={18} />
               </button>
 
-              {/* Referrals */}
+              {/* VIEW REFERRALS */}
               <button
                 className="action-card"
                 type="button"
+                onClick={() => navigate("/referral/tracking")}
               >
                 <div className="action-icon">
                   <ClipboardList size={21} />
                 </div>
 
                 <div>
-                  <strong>
-                    {t('dashboard', 'viewReferrals')}
-                  </strong>
+                  <strong>{t("dashboard", "viewReferrals")}</strong>
 
-                  <span>
-                    {t('dashboard', 'referralDescription')}
-                  </span>
+                  <span>{t("dashboard", "referralDescription")}</span>
                 </div>
 
                 <ChevronRight size={18} />
@@ -252,19 +220,18 @@ function Dashboard() {
             <div className="panel-header">
               <div>
                 <p className="section-kicker">
-                  {t('dashboard', 'recentActivity')}
+                  {t("dashboard", "recentActivity")}
                 </p>
 
-                <h3>
-                  {t('dashboard', 'screeningStatus')}
-                </h3>
+                <h3>{t("dashboard", "screeningStatus")}</h3>
               </div>
 
               <button
                 className="text-button"
                 type="button"
+                onClick={() => navigate("/patients")}
               >
-                {t('dashboard', 'viewAll')}
+                {t("dashboard", "viewAll")}
               </button>
             </div>
 
@@ -296,29 +263,23 @@ function Dashboard() {
           </section>
         </div>
 
-        {/* =========================
-            TRUST BANNER
-           ========================= */}
+        {/* TRUST BANNER */}
         <section className="trust-banner">
           <div className="trust-banner-icon">
             <ShieldCheck size={22} />
           </div>
 
           <div>
-            <strong>
-              {t('dashboard', 'trustTitle')}
-            </strong>
+            <strong>{t("dashboard", "trustTitle")}</strong>
 
-            <p>
-              {t('dashboard', 'trustDescription')}
-            </p>
+            <p>{t("dashboard", "trustDescription")}</p>
           </div>
         </section>
       </main>
 
       <BottomNav />
     </div>
-  )
+  );
 }
 
 /* =========================================================
@@ -332,17 +293,15 @@ function PatientRow({
   status,
   statusClass,
 }: {
-  initials: string
-  name: string
-  time: string
-  status: string
-  statusClass: string
+  initials: string;
+  name: string;
+  time: string;
+  status: string;
+  statusClass: string;
 }) {
   return (
     <div className="patient-row">
-      <div className="patient-avatar">
-        {initials}
-      </div>
+      <div className="patient-avatar">{initials}</div>
 
       <div className="patient-info">
         <strong>{name}</strong>
@@ -350,23 +309,15 @@ function PatientRow({
       </div>
 
       <span className={`status-pill ${statusClass}`}>
-        {status === 'Routine' &&
-          t('dashboard', 'routine')}
+        {status === "Routine" && t("dashboard", "routine")}
 
-        {status === 'Consult' &&
-          t('dashboard', 'consult')}
+        {status === "Consult" && t("dashboard", "consult")}
 
-        {status === 'Urgent' &&
-          t('dashboard', 'urgent')}
+        {status === "Urgent" && t("dashboard", "urgent")}
       </span>
     </div>
-  )
+  );
 }
-
-/* =========================================================
-   PLACEHOLDER
-   ========================================================= */
-
 
 /* =========================================================
    APP ROUTES
@@ -376,44 +327,77 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* PUBLIC ROUTES */}
         <Route path="/" element={<AuthLanding />} />
+
         <Route path="/login" element={<Login />} />
+
         <Route path="/signup" element={<Signup />} />
+
         <Route path="/unauthorized" element={<Unauthorized />} />
 
-        <Route element={<ProtectedRoute allowedRoles={['patient', 'asha', 'doctor', 'admin']} />}>
+        {/* GENERAL PROTECTED APPLICATION */}
+        <Route
+          element={
+            <ProtectedRoute
+              allowedRoles={["patient", "asha", "doctor", "admin"]}
+            />
+          }
+        >
+          {/* MAIN DASHBOARD */}
+          <Route path="/dashboard" element={<Dashboard />} />
+
           <Route path="/patients" element={<Patients />} />
+
           <Route path="/patients/register" element={<PatientRegistration />} />
+
           <Route path="/patients/profile" element={<PatientProfile />} />
+
+          {/* SCREENING */}
           <Route path="/screening/start" element={<ScreeningStart />} />
+
           <Route path="/screening" element={<Screening />} />
+
           <Route path="/screening/rppg" element={<RPPGScreening />} />
+
           <Route path="/screening/trustscore" element={<TrustScore />} />
+
           <Route path="/screening/triage" element={<Triage />} />
+
+          {/* REFERRALS */}
           <Route path="/referral" element={<Referral />} />
+
           <Route path="/referral/tracking" element={<ReferralTracking />} />
-          <Route path="/patient-record" element={<PatientRecord />} />
+
+          {/* PATIENT RECORD */}
+          <Route path="/patient-record" element={<PatientRecordPage />} />
+
+          {/* FOLLOW-UP */}
           <Route path="/follow-up" element={<FollowUp />} />
         </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={['patient']} />}>
+        {/* PATIENT ROLE */}
+        <Route element={<ProtectedRoute allowedRoles={["patient"]} />}>
           <Route path="/patient" element={<RoleDashboard role="patient" />} />
         </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={['asha']} />}>
+        {/* ASHA ROLE */}
+        <Route element={<ProtectedRoute allowedRoles={["asha"]} />}>
           <Route path="/asha" element={<RoleDashboard role="asha" />} />
         </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={['doctor']} />}>
+        {/* DOCTOR ROLE */}
+        <Route element={<ProtectedRoute allowedRoles={["doctor"]} />}>
           <Route path="/doctor" element={<RoleDashboard role="doctor" />} />
         </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+        {/* ADMIN ROLE */}
+        <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
           <Route path="/admin" element={<RoleDashboard role="admin" />} />
         </Route>
       </Routes>
     </BrowserRouter>
-  )
+  );
 }
 
-export default App
+export default App;

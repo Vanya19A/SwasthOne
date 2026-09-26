@@ -21,7 +21,7 @@ import { apiFetch } from '../services/api'
 import { getPatientRecord } from '../utils/patientRecordStorage'
 import type { PatientRecord } from '../types/patientRecord'
 
-function PatientRecord() {
+function PatientRecordView() {
   useLanguage()
 
   const navigate = useNavigate()
@@ -666,4 +666,4 @@ function TimelineItem({
   )
 }
 
-export default PatientRecord
+export default PatientRecordView

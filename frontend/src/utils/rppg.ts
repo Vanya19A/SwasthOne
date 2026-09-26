@@ -57,7 +57,7 @@ export function pos(samples:RGBSample[], fs:number) {
     const a=Math.max(0,i-window+1), w=samples.slice(a,i+1)
     if(w.length<8){ out.push(0); continue }
     const r=normalized(w.map(s=>s.r)), g=normalized(w.map(s=>s.g)), b=normalized(w.map(s=>s.b))
-    const x=r.map((v,j)=>g[j]-b[j])
+    const x=r.map((_,j)=>g[j]-b[j])
     const y=r.map((v,j)=>g[j]+b[j]-2*v)
     const alpha=std(x)/(std(y)||1)
     out.push(x[x.length-1]-alpha*y[y.length-1])
