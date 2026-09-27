@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
+const { createProxyMiddleware } = require("http-proxy-middleware");
 
 const authRoutes = require("./routes/authRoutes");
 const patientRoutes = require("./routes/patientRoutes");
@@ -30,7 +31,7 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Authentication routes
+// Authentication and API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/patients", patientRoutes);
 app.use("/api/screenings", screeningRoutes);
@@ -41,13 +42,32 @@ app.use("/api/facilities", facilityRoutes);
 app.use("/api/followups", followUpRoutes);
 app.use("/api/records", recordRoutes);
 
+// Frontend reverse proxy
+app.use(
+  "/",
+  createProxyMiddleware({
+    target: "https://swasthone-frontend.onrender.com",
+    changeOrigin: true,
+    secure: true,
+  }),
+);
+
+// 404 handler
 app.use((req, res) => {
-  res.status(404).json({ success: false, message: "Route not found" });
+  res.status(404).json({
+    success: false,
+    message: "Route not found",
+  });
 });
 
+// Error handler
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
-  res.status(500).json({ success: false, message: "Internal server error" });
+
+  res.status(500).json({
+    success: false,
+    message: "Internal server error",
+  });
 });
 
 module.exports = app;
