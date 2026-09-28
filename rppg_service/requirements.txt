@@ -1,7 +1,7 @@
 Flask==2.3.3
 flask-cors==4.0.0
 gunicorn
-opencv-python-headless
+opencv-python-headless==4.13.0.92
 numpy
 scipy
 scikit-image
