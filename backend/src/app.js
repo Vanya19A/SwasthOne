@@ -15,7 +15,29 @@ const recordRoutes = require("./routes/recordRoutes");
 
 const app = express();
 
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        connectSrc: [
+          "'self'",
+          "https://swasthone-rppg.onrender.com",
+        ],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "blob:",
+        ],
+        mediaSrc: [
+          "'self'",
+          "blob:",
+        ],
+      },
+    },
+  })
+);
+
 app.use(cors());
 app.use(express.json());
 
