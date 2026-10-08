@@ -403,12 +403,23 @@ def process_window(region_buffers, fs, window_id=0):
 
         for method_name, fn in method_functions:
             try:
-                # Toolbox signatures differ: POS takes FS; several other
-                # methods only take the color data.
-                if method_name in ("POS", "CHROM"):
+                # Toolbox signatures differ:
+                # POS, CHROM and ICA require the sampling frequency;
+                # the remaining methods take only the RGB frame data.
+                if method_name in ("POS", "CHROM", "ICA"):
                     bvp = fn(data, fs)
                 else:
                     bvp = fn(data)
+
+                # Normalize every method output to a clean 1-D finite signal
+                # before spectral analysis.
+                bvp = np.asarray(bvp, dtype=np.float64).flatten()
+
+                if len(bvp) < int(fs * 10):
+                    raise ValueError("BVP output is shorter than 10 seconds")
+
+                if not np.all(np.isfinite(bvp)):
+                    raise ValueError("BVP output contains NaN or infinite values")
 
                 profile = spectral_profile(bvp, fs)
                 if profile is None:
