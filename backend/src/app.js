@@ -22,7 +22,7 @@ app.use(
         defaultSrc: ["'self'"],
         connectSrc: [
           "'self'",
-          "https://swasthone-rppg.onrender.com",
+          "https://swasthone-rppg-v2.onrender.com",
         ],
         imgSrc: [
           "'self'",
