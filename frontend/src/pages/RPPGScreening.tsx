@@ -54,6 +54,22 @@ interface V2Result {
   demoMode: boolean
 }
 
+const RECORD_SECONDS = 30
+const ANALYSIS_TIMEOUT_MS = 120_000
+
+function getServiceUrl() {
+  const configured = import.meta.env.VITE_RPPG_API_URL?.trim()
+
+  // Never silently send a production user's recording to their own localhost.
+  if (!configured && import.meta.env.PROD) {
+    throw new Error(
+      'The rPPG service URL is not configured. Please contact the administrator.',
+    )
+  }
+
+  return (configured || 'http://localhost:8000').replace(/\/+$/, '')
+}
+
 function RPPGScreening() {
   useLanguage()
 
@@ -68,6 +84,7 @@ function RPPGScreening() {
   const streamRef = useRef<MediaStream | null>(null)
   const timerRef = useRef<number | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
+  const analysisAbortRef = useRef<AbortController | null>(null)
   const recordingChunksRef = useRef<Blob[]>([])
   const [analysis, setAnalysis] = useState<V2Result | null>(null)
   const [analysisReady, setAnalysisReady] = useState(false)
@@ -78,7 +95,7 @@ function RPPGScreening() {
   >('idle')
 
   const [isMeasuring, setIsMeasuring] = useState(false)
-  const [secondsRemaining, setSecondsRemaining] = useState(30)
+  const [secondsRemaining, setSecondsRemaining] = useState(RECORD_SECONDS)
   const [measurementComplete, setMeasurementComplete] =
     useState(false)
   const [saving, setSaving] = useState(false)
@@ -100,8 +117,19 @@ function RPPGScreening() {
 
   useEffect(() => {
     return () => {
+      analysisAbortRef.current?.abort()
       if (timerRef.current) {
         window.clearInterval(timerRef.current)
+      }
+      // Leaving the page mid-recording must not upload a partial clip.
+      const recorder = recorderRef.current
+      if (recorder) {
+        recorder.onstop = null
+        recorder.ondataavailable = null
+        if (recorder.state !== 'inactive') {
+          try { recorder.stop() } catch { /* already stopped */ }
+        }
+        recorderRef.current = null
       }
       if (streamRef.current) {
         streamRef.current
@@ -111,6 +139,21 @@ function RPPGScreening() {
     }
   }, [])
 
+  // Wake a sleeping/cold rPPG host while the user is positioning their face and
+  // during the 30 s recording, so the real analysis does not pay the cold start.
+  const warmUpService = () => {
+    try {
+      const url = getServiceUrl()
+      const controller = new AbortController()
+      const id = window.setTimeout(() => controller.abort(), 60_000)
+      fetch(`${url}/health`, { signal: controller.signal })
+        .catch(() => undefined)
+        .finally(() => window.clearTimeout(id))
+    } catch {
+      // Missing URL is reported when the analysis is actually requested.
+    }
+  }
+
   const startCamera = async () => {
     try {
       setCameraStatus('requesting')
@@ -119,8 +162,9 @@ function RPPGScreening() {
         await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: 'user',
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            frameRate: { ideal: 30 },
           },
           audio: false,
         })
@@ -128,6 +172,7 @@ function RPPGScreening() {
       streamRef.current = stream
 
       setCameraStatus('ready')
+      warmUpService()
     } catch (error) {
       console.error('Camera access error:', error)
       setCameraStatus('denied')
@@ -147,16 +192,21 @@ function RPPGScreening() {
     setAnalyzing(true)
     setError('')
 
+    const controller = new AbortController()
+    analysisAbortRef.current = controller
+    const timeoutId = window.setTimeout(() => controller.abort(), ANALYSIS_TIMEOUT_MS)
+
     try {
+      const serviceUrl = getServiceUrl()
       const formData = new FormData()
       formData.append('video', blob, 'swasthone-rppg-v2.webm')
-
-      const serviceUrl =
-        import.meta.env.VITE_RPPG_API_URL || 'http://localhost:8000'
+      // Lets the service derive the sampling rate if the container has no timestamps.
+      formData.append('duration', String(RECORD_SECONDS))
 
       const response = await fetch(`${serviceUrl}/analyze`, {
         method: 'POST',
         body: formData,
+        signal: controller.signal,
       })
 
       const payload = await response.json().catch(() => ({}))
@@ -164,25 +214,51 @@ function RPPGScreening() {
       if (!response.ok || !payload.success) {
         throw new Error(
           payload.message ||
-            'The V2 rPPG service could not process the recording.',
+            `The V2 rPPG service could not process the recording (HTTP ${response.status}).`,
+        )
+      }
+
+      if (!payload.result || typeof payload.result.heartRate === 'undefined') {
+        throw new Error(
+          'The rPPG service returned an incomplete result. Please retake the measurement.',
         )
       }
 
       setAnalysis(payload.result as V2Result)
       setAnalysisReady(
-        Boolean(payload.result?.heartRate !== null && payload.result?.accept),
+        Boolean(payload.result.heartRate !== null && payload.result.accept),
       )
     } catch (error) {
       console.error('V2 rPPG analysis error:', error)
       setAnalysisReady(false)
-      setError(
-        error instanceof Error
-          ? error.message
-          : 'Unable to analyse the rPPG recording.',
-      )
+      setMeasurementComplete(false)
+
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        setError(
+          'V2 analysis timed out or was cancelled. Please retake the measurement and try again.',
+        )
+      } else if (error instanceof TypeError) {
+        setError(
+          'Could not connect to the rPPG service. Check the service URL and connection, then retake the measurement.',
+        )
+      } else {
+        setError(
+          error instanceof Error
+            ? error.message
+            : 'Unable to analyse the rPPG recording.',
+        )
+      }
     } finally {
+      window.clearTimeout(timeoutId)
+      if (analysisAbortRef.current === controller) {
+        analysisAbortRef.current = null
+      }
       setAnalyzing(false)
     }
+  }
+
+  const cancelAnalysis = () => {
+    analysisAbortRef.current?.abort()
   }
 
   const startMeasurement = () => {
@@ -224,11 +300,11 @@ function RPPGScreening() {
       setError('')
       setIsMeasuring(true)
       setMeasurementComplete(false)
-      setSecondsRemaining(30)
+      setSecondsRemaining(RECORD_SECONDS)
 
       recorder.start(1000)
 
-      let remaining = 30
+      let remaining = RECORD_SECONDS
       timerRef.current = window.setInterval(() => {
         remaining -= 1
         setSecondsRemaining(remaining)
@@ -298,26 +374,35 @@ function RPPGScreening() {
 
     const trustScoreState = { patient, screening, rppg: rppgResult }
 
+    // Persist BEFORE moving on, so triage always sees the camera result.
+    // Offline / not-yet-saved screenings skip this and use the local flow.
+    if (screening._id && navigator.onLine) {
+      try {
+        await apiFetch('/rppg', {
+          method: 'POST',
+          body: JSON.stringify({
+            screeningId: screening._id,
+            hr: rppgResult.heartRate,
+            ...rppgResult,
+          }),
+        })
+      } catch (err) {
+        console.error('Unable to save rPPG result:', err)
+        setError(
+          err instanceof Error
+            ? `Could not save the camera result: ${err.message}. Please try again.`
+            : 'Could not save the camera result. Please try again.',
+        )
+        setSaving(false)
+        return
+      }
+    }
+
     setSaving(false)
     navigate('/screening/trustscore', { state: trustScoreState })
-
-    if (!screening._id || !navigator.onLine) return
-
-    try {
-      await apiFetch('/rppg', {
-        method: 'POST',
-        body: JSON.stringify({
-          screeningId: screening._id,
-          hr: rppgResult.heartRate,
-          ...rppgResult,
-        }),
-      })
-    } catch (err) {
-      console.warn('Unable to persist rPPG result in background:', err)
-    }
   }
 
-  const progress = ((30 - secondsRemaining) / 30) * 100
+  const progress = ((RECORD_SECONDS - secondsRemaining) / RECORD_SECONDS) * 100
 
   return (
     <div className="page-shell">
@@ -592,11 +677,23 @@ function RPPGScreening() {
             )}
 
             {analyzing && (
-              <div className="rppg-live-metrics">
-                <div><span>V2 engine</span><strong>Processing…</strong></div>
-                <div><span>Face tracking</span><strong>Running</strong></div>
-                <div><span>Consensus</span><strong>Calculating</strong></div>
-              </div>
+              <>
+                <div className="rppg-live-metrics">
+                  <div><span>V2 engine</span><strong>Processing…</strong></div>
+                  <div><span>Face tracking</span><strong>Running</strong></div>
+                  <div><span>Consensus</span><strong>Calculating</strong></div>
+                </div>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={cancelAnalysis}
+                >
+                  Cancel analysis
+                </button>
+                <p className="form-hint">
+                  Analysis can take up to 2 minutes. If it times out, you can retake the measurement.
+                </p>
+              </>
             )}
 
             {cameraStatus === 'ready' &&
