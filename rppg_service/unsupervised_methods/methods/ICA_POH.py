@@ -1,43 +1,59 @@
 """
-ICA
-Non-contact, automated cardiac pulse measurements using video imaging
-and blind source separation.
+ICA-based remote photoplethysmography (rPPG).
 
-Based on:
+This implementation accepts real-valued RGB ROI frames, normalizes their
+per-frame channel means, separates the channels using real-valued FastICA,
+selects the component with the strongest normalized power in the expected
+cardiac band, and band-pass filters the selected component.
+
+Based on the ICA approach described in:
 Poh, M. Z., McDuff, D. J., & Picard, R. W. (2010).
-Optics Express, 18(10), 10762-10774.
+Non-contact, automated cardiac pulse measurements using video imaging
+and blind source separation. Optics Express, 18(10), 10762-10774.
+
+Note:
+- FastICA is used here instead of the custom complex-valued JADE code.
+- This removes the complex-to-real cast that generated ComplexWarning.
+- This is an algorithmic change; validate heart-rate estimates against a
+  reference device before relying on the results.
 """
 
-import math
 import numpy as np
-from scipy import linalg, signal
+from scipy import signal
+from sklearn.decomposition import FastICA
 from unsupervised_methods import utils
 
 
 def ICA_POH(frames, FS):
     """
-    Estimate blood volume pulse using ICA.
+    Estimate a blood-volume-pulse (BVP) signal from ROI video frames.
 
     Parameters
     ----------
-    frames : list[np.ndarray]
-        Video frames containing the ROI.
+    frames : sequence of np.ndarray
+        Video frames containing the selected ROI. Each valid frame must have
+        shape (height, width, 3), with channel order consistent across frames.
     FS : float
-        Sampling frequency / effective FPS.
+        Effective sampling frequency in frames per second.
 
     Returns
     -------
     np.ndarray
-        Estimated BVP signal.
-    """
+        One-dimensional, real-valued, band-pass-filtered BVP signal.
 
+    Raises
+    ------
+    ValueError
+        If frames, sampling frequency, channel variation, or output signal
+        are invalid or insufficient for processing.
+    """
     if frames is None or len(frames) < 10:
         raise ValueError("Not enough frames for ICA")
 
-    if FS is None or FS <= 0:
+    if FS is None or not np.isfinite(FS) or FS <= 0:
         raise ValueError("Invalid sampling frequency")
 
-    # Band-pass limits
+    # Expected cardiac frequency band in Hz.
     LPF = 0.7
     HPF = 2.5
 
@@ -48,27 +64,25 @@ def ICA_POH(frames, FS):
             f"Expected RGB signal with shape (N, 3), got {RGB.shape}"
         )
 
-    # Nyquist frequency
     NyquistF = FS / 2.0
-
     if HPF >= NyquistF:
         raise ValueError(
             f"Sampling frequency {FS:.2f} FPS is too low for "
             f"{HPF} Hz upper cutoff"
         )
 
-    # Normalize RGB channels
+    # Normalize each real-valued RGB channel after detrending.
     BGRNorm = np.zeros_like(RGB, dtype=np.float64)
-
     Lambda = 100
 
     for c in range(3):
-        channel = RGB[:, c].astype(np.float64)
+        channel = RGB[:, c].astype(np.float64, copy=False)
+        BGRDetrend = np.asarray(utils.detrend(channel, Lambda), dtype=np.float64)
 
-        BGRDetrend = utils.detrend(channel, Lambda)
+        if not np.all(np.isfinite(BGRDetrend)):
+            raise ValueError(f"RGB channel {c} contains non-finite values")
 
         std = np.std(BGRDetrend)
-
         if std < 1e-12:
             raise ValueError(
                 f"RGB channel {c} has insufficient variation"
@@ -78,513 +92,127 @@ def ICA_POH(frames, FS):
             BGRDetrend - np.mean(BGRDetrend)
         ) / std
 
-    # ICA expects:
-    # rows    = channels
-    # columns = observations
-    X = BGRNorm.T
+    if not np.all(np.isfinite(BGRNorm)):
+        raise ValueError("Normalized RGB signal contains non-finite values")
 
-    _, S = ica(X, 3)
+    # FastICA expects rows=observations and columns=features.
+    # Input and output remain real-valued.
+    ica_model = FastICA(
+        n_components=3,
+        algorithm="parallel",
+        whiten="unit-variance",
+        fun="logcosh",
+        max_iter=1000,
+        tol=1e-4,
+        random_state=42,
+    )
 
-    S = np.asarray(S, dtype=np.float64)
+    try:
+        sources = ica_model.fit_transform(BGRNorm)
+    except Exception as exc:
+        raise ValueError(f"FastICA source separation failed: {exc}") from exc
 
-    if S.ndim != 2:
-        raise ValueError(f"Unexpected ICA output shape: {S.shape}")
-
-    # Ensure shape = (3, N)
-    if S.shape[0] != 3 and S.shape[1] == 3:
-        S = S.T
-
-    if S.shape[0] != 3:
+    if sources.ndim != 2 or sources.shape != (len(BGRNorm), 3):
         raise ValueError(
-            f"ICA produced invalid source shape: {S.shape}"
+            f"Unexpected FastICA output shape: {sources.shape}"
         )
 
-    # ---------------------------------------------------------
-    # Select the component with the strongest cardiac frequency
-    # ---------------------------------------------------------
+    if not np.all(np.isfinite(sources)):
+        raise ValueError("FastICA produced non-finite source components")
 
-    MaxPx = np.zeros(3)
+    # Keep the (3, N) orientation used by the existing component-selection
+    # and filtering stages.
+    S = sources.T.astype(np.float64, copy=False)
 
+    # Select the component with the strongest normalized cardiac-band power.
+    component_scores = np.zeros(3, dtype=np.float64)
     for c in range(3):
+        component = S[c].ravel()
 
-        component = np.asarray(S[c]).flatten()
-
-        if len(component) < 10:
+        if component.size < 10:
             continue
 
-        FF = np.fft.rfft(component)
+        # FFT-based power spectrum.
+        spectrum = np.fft.rfft(component)
+        freqs = np.fft.rfftfreq(component.size, d=1.0 / FS)
+        power = np.abs(spectrum) ** 2
 
-        freqs = np.fft.rfftfreq(
-            len(component),
-            d=1.0 / FS
-        )
-
-        power = np.abs(FF) ** 2
-
-        valid = (
-            (freqs >= LPF) &
-            (freqs <= HPF)
-        )
-
+        valid = (freqs >= LPF) & (freqs <= HPF)
         if not np.any(valid):
             continue
 
         cardiac_power = power[valid]
-
         total_power = np.sum(cardiac_power)
 
-        if total_power <= 1e-12:
+        if not np.isfinite(total_power) or total_power <= 1e-12:
             continue
 
-        normalized_power = cardiac_power / total_power
+        component_scores[c] = np.max(cardiac_power / total_power)
 
-        MaxPx[c] = np.max(normalized_power)
+    if not np.any(component_scores > 0):
+        raise ValueError(
+            "No ICA component has usable power in the cardiac frequency band"
+        )
 
-    MaxComp = int(np.argmax(MaxPx))
+    selected_component = int(np.argmax(component_scores))
+    BVP_I = S[selected_component].astype(np.float64, copy=False).ravel()
 
-    BVP_I = np.asarray(
-        S[MaxComp],
-        dtype=np.float64
-    ).flatten()
-
-    # ---------------------------------------------------------
-    # Band-pass filtering
-    # ---------------------------------------------------------
-
+    # Butterworth band-pass filter.
     low = LPF / NyquistF
     high = HPF / NyquistF
 
-    B, A = signal.butter(
-        3,
-        [low, high],
-        btype="bandpass"
-    )
+    B, A = signal.butter(3, [low, high], btype="bandpass")
 
-    # filtfilt needs enough samples
+    # scipy.signal.filtfilt requires enough samples for padding.
     min_required = 3 * max(len(A), len(B)) + 1
-
     if len(BVP_I) <= min_required:
         raise ValueError(
             f"Not enough samples for filtering: "
-            f"{len(BVP_I)} < {min_required}"
+            f"{len(BVP_I)} samples; need more than {min_required}"
         )
 
-    BVP_F = signal.filtfilt(
-        B,
-        A,
-        BVP_I
-    )
+    BVP_F = signal.filtfilt(B, A, BVP_I)
 
-    return np.asarray(
-        BVP_F,
-        dtype=np.float64
-    ).flatten()
+    if not np.all(np.isfinite(BVP_F)):
+        raise ValueError("Filtered BVP contains non-finite values")
+
+    return np.asarray(BVP_F, dtype=np.float64).ravel()
 
 
 def process_video(frames):
     """
-    Calculate average RGB value for every frame.
+    Calculate mean channel values for every valid ROI frame.
 
     Returns
     -------
     np.ndarray
-        Shape: (N, 3)
+        Real-valued array with shape (N, 3).
     """
-
     RGB = []
 
     for frame in frames:
-
         if frame is None:
             continue
 
         frame = np.asarray(frame)
-
         if frame.ndim != 3 or frame.shape[2] != 3:
             continue
 
-        # Mean RGB/BGR channels
-        mean_value = np.mean(
-            frame,
-            axis=(0, 1)
-        )
+        if frame.size == 0:
+            continue
+
+        mean_value = np.mean(frame, axis=(0, 1), dtype=np.float64)
+        if not np.all(np.isfinite(mean_value)):
+            continue
 
         RGB.append(mean_value)
 
     if len(RGB) == 0:
         raise ValueError("No valid frames")
 
-    RGB = np.asarray(
-        RGB,
-        dtype=np.float64
-    )
+    RGB = np.asarray(RGB, dtype=np.float64)
 
     if RGB.ndim != 2 or RGB.shape[1] != 3:
-        raise ValueError(
-            f"Invalid RGB signal shape: {RGB.shape}"
-        )
+        raise ValueError(f"Invalid RGB signal shape: {RGB.shape}")
 
     return RGB
-
-
-def ica(X, Nsources, Wprev=None):
-
-    X = np.asarray(
-        X,
-        dtype=np.complex128
-    )
-
-    if X.ndim != 2:
-        raise ValueError(
-            f"ICA input must be 2-D, got {X.shape}"
-        )
-
-    nRows, nCols = X.shape
-
-    if nRows > nCols:
-        raise ValueError(
-            "ICA input must have shape "
-            "(channels, observations)"
-        )
-
-    if Nsources > min(nRows, nCols):
-        Nsources = min(nRows, nCols)
-
-    Winv, Zhat = jade(
-        X,
-        Nsources,
-        Wprev
-    )
-
-    W = np.linalg.pinv(Winv)
-
-    return W, Zhat
-
-
-def jade(X, m, Wprev=None):
-
-    X = np.asarray(
-        X,
-        dtype=np.complex128
-    )
-
-    n = X.shape[0]
-    T = X.shape[1]
-
-    if T < 10:
-        raise ValueError("Not enough observations for ICA")
-
-    nem = m
-
-    seuil = 1.0 / math.sqrt(T) / 100.0
-
-    # ---------------------------------------------------------
-    # Whitening
-    # ---------------------------------------------------------
-
-    covariance = (
-        X @ X.conj().T
-    ) / T
-
-    D, U = np.linalg.eigh(covariance)
-
-    D = np.real(D)
-
-    D = np.maximum(
-        D,
-        1e-12
-    )
-
-    order = np.argsort(D)
-
-    selected = order[-m:]
-
-    eigenvalues = D[selected]
-
-    eigenvectors = U[:, selected]
-
-    inv_sqrt = 1.0 / np.sqrt(
-        eigenvalues
-    )
-
-    sqrt_values = np.sqrt(
-        eigenvalues
-    )
-
-    W = (
-        np.diag(inv_sqrt)
-        @ eigenvectors.conj().T
-    )
-
-    IW = (
-        eigenvectors
-        @ np.diag(sqrt_values)
-    )
-
-    Y = W @ X
-
-    # ---------------------------------------------------------
-    # Covariance matrices
-    # ---------------------------------------------------------
-
-    R = (
-        Y @ Y.conj().T
-    ) / T
-
-    C = (
-        Y @ Y.T
-    ) / T
-
-    # ---------------------------------------------------------
-    # Fourth-order cumulant matrix
-    # ---------------------------------------------------------
-
-    Q = np.zeros(
-        (m * m, m * m),
-        dtype=np.complex128
-    )
-
-    index = 0
-
-    for lx in range(m):
-
-        Y1 = Y[lx, :]
-
-        for kx in range(m):
-
-            Yk1 = (
-                Y1 *
-                np.conj(Y[kx, :])
-            )
-
-            for jx in range(m):
-
-                Yjk1 = (
-                    Yk1 *
-                    np.conj(Y[jx, :])
-                )
-
-                for ix in range(m):
-
-                    value = (
-                        np.sum(
-                            Yjk1 *
-                            Y[ix, :]
-                        ) / T
-                    )
-
-                    value -= (
-                        R[ix, jx] *
-                        R[lx, kx]
-                    )
-
-                    value -= (
-                        R[ix, kx] *
-                        R[lx, jx]
-                    )
-
-                    value -= (
-                        C[ix, lx] *
-                        np.conj(
-                            C[jx, kx]
-                        )
-                    )
-
-                    Q[index // (m * m),
-                      index % (m * m)] = value
-
-                    index += 1
-
-    # ---------------------------------------------------------
-    # Eigen decomposition
-    # ---------------------------------------------------------
-
-    D, U = np.linalg.eig(Q)
-
-    Diag = np.abs(D)
-
-    K = np.argsort(Diag)
-
-    M = np.zeros(
-        (m, nem * m),
-        dtype=np.complex128
-    )
-
-    h = m * m - 1
-
-    for u in range(
-        0,
-        nem * m,
-        m
-    ):
-
-        Z = U[:, K[h]].reshape(
-            (m, m)
-        )
-
-        M[:, u:u + m] = (
-            Diag[K[h]] * Z
-        )
-
-        h -= 1
-
-    # ---------------------------------------------------------
-    # Joint diagonalisation
-    # ---------------------------------------------------------
-
-    B = np.array(
-        [
-            [1, 0, 0],
-            [0, 1, 1],
-            [0, -1j, 1j],
-        ],
-        dtype=np.complex128
-    )
-
-    Bt = B.conj().T
-
-    encore = True
-
-    if Wprev is None:
-        V = np.eye(
-            m,
-            dtype=np.complex128
-        )
-    else:
-        V = np.linalg.inv(Wprev)
-
-    while encore:
-
-        encore = False
-
-        for p in range(m - 1):
-
-            for q in range(p + 1, m):
-
-                Ip = np.arange(
-                    p,
-                    nem * m,
-                    m
-                )
-
-                Iq = np.arange(
-                    q,
-                    nem * m,
-                    m
-                )
-
-                g = np.vstack(
-                    [
-                        M[p, Ip] -
-                        M[q, Iq],
-
-                        M[p, Iq],
-
-                        M[q, Ip],
-                    ]
-                )
-
-                temp1 = (
-                    g @ g.conj().T
-                )
-
-                temp2 = (
-                    B @ temp1
-                )
-
-                temp = (
-                    temp2 @ Bt
-                )
-
-                D, vcp = np.linalg.eigh(
-                    np.real(temp)
-                )
-
-                order = np.argsort(D)
-
-                angles = vcp[
-                    :,
-                    order[-1]
-                ]
-
-                if angles[0] < 0:
-                    angles = -angles
-
-                c = np.sqrt(
-                    max(
-                        0.0,
-                        0.5 +
-                        angles[0] / 2.0
-                    )
-                )
-
-                if abs(c) < 1e-12:
-                    continue
-
-                s = (
-                    0.5 *
-                    (
-                        angles[1]
-                        - 1j * angles[2]
-                    )
-                    / c
-                )
-
-                if abs(s) > seuil:
-
-                    encore = True
-
-                    pair = [
-                        p,
-                        q
-                    ]
-
-                    G = np.array(
-                        [
-                            [
-                                c,
-                                -np.conj(s)
-                            ],
-                            [
-                                s,
-                                c
-                            ],
-                        ],
-                        dtype=np.complex128
-                    )
-
-                    V[:, pair] = (
-                        V[:, pair] @ G
-                    )
-
-                    M[pair, :] = (
-                        G.conj().T @
-                        M[pair, :]
-                    )
-
-                    temp1 = (
-                        c * M[:, Ip]
-                        + s * M[:, Iq]
-                    )
-
-                    temp2 = (
-                        -np.conj(s) *
-                        M[:, Ip]
-                        + c *
-                        M[:, Iq]
-                    )
-
-                    M[:, Ip] = temp1
-                    M[:, Iq] = temp2
-
-    # ---------------------------------------------------------
-    # Final source separation
-    # ---------------------------------------------------------
-
-    A = IW @ V
-
-    S = (
-        V.conj().T @ Y
-    )
-
-    return A, S
